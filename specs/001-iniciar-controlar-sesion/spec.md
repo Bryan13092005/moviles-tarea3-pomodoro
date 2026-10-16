@@ -1,6 +1,6 @@
 # Spec 001 — Iniciar y controlar una sesión
 
-Estado: borrador  
+Estado: aprobado
 HU de origen: docs/Historias/HU_001.md
 
 ## Contexto y objetivo
