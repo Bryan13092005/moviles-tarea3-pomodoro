@@ -13,8 +13,10 @@
 - **Refactor `app/(tabs)` completado:** rutas y layout movidos a `src/app/(tabs)/` (`_layout.tsx`, `index.tsx`, `explore.tsx`); eliminados los archivos sueltos de `src/app/`; `src/components/app-tabs.web.tsx` ajustado a `href="/(tabs)/index"` y `href="/(tabs)/explore"`.
 - Verificación tras refactor: `npx tsc --noEmit` → limpio; `npx expo lint` → limpio; `npx jest` → **31 passed**.
 - **Nota:** `expo-notifications` no funciona en Expo Go (requiere development build). T7/T8 se pueden revisar parcialmente en Expo Go (pantalla, controles, diálogos, banner), pero la alarma real necesita device con development build.
+- **T-11 (corrección de visualización):** en `src/hooks/useTimer.ts`, `manejarFaseCompletada` ahora fija `tiempoMostrar` con la duración completa de la siguiente fase preparada (`setTiempoMostrar(estadoTransicion.tiempoRestante)`), de modo que al terminar una fase la pantalla muestra la siguiente fase detenida en cuanto termina. `npx jest` → **31 passed**. El typecheck/lint de este entorno no se pudo ejecutar (node_modules/.bin ausente y `@types/react` sin resolver); el cambio sigue el mismo patrón tipado ya usado en el propio archivo.
 
 ## Próximos pasos
 
 1. Tú pruebas T7 y T8 en Expo Go según las listas manuales de convenciones (pantalla, controles, diálogos, banner) y me confirmas.
 2. Para probar la alarma (RF-10, RF-11), se requiere un development build (`npx expo run:android|ios` o `eas build --profile development`).
+3. Tú pruebas T-11 en Expo Go: al terminar una fase debe mostrarse inmediatamente la siguiente fase detenida con su duración completa (RF-10, RF-12). Confírmame para cerrar la tarea.

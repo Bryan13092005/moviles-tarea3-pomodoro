@@ -1,0 +1,7 @@
+.agents/
+.claude/
+node_modules/
+.github/
+.grok/
+.codestudio/
+.opencode/  

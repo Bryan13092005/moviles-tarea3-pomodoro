@@ -8,6 +8,8 @@
  * Un estado separado `tiempoMostrar` se actualiza cada segundo mediante un
  * interval basado en timestamps, para que el reloj se vea avanzando en pantalla
  * sin crear race conditions entre el interval y las acciones del usuario.
+ * Cuando una fase completa, `manejarFaseCompletada` fija `tiempoMostrar`
+ * con la duración completa de la siguiente fase preparada (RF-10, RF-12).
  * RF-02…RF-14, RF-08, RF-09, RNF-01, RNF-02.
  */
 
@@ -64,11 +66,15 @@ export interface UseTimerReturn {
 /**
  * Aplica una transición de fase completada: guarda, activa alarma y prepara
  * la siguiente fase detenida (sin iniciarla automáticamente).
+ * Además sincroniza `tiempoMostrar` con la duración completa de esa fase,
+ * para que la pantalla muestre la siguiente fase en cuanto termina
+ * (RF-10, RF-12, Decisión 7).
  */
 function manejarFaseCompletada(
   faseAnterior: FaseCompletadaEvent['faseAnterior'],
   state: TimerState,
   setState: React.Dispatch<React.SetStateAction<TimerState>>,
+  setTiempoMostrar: React.Dispatch<React.SetStateAction<number>>,
   setAlarmaActiva: (v: boolean) => void,
 ) {
   const estadoTransicion = completePhase(
@@ -76,6 +82,7 @@ function manejarFaseCompletada(
     DURACION_POR_FASE,
   );
   setState(estadoTransicion);
+  setTiempoMostrar(estadoTransicion.tiempoRestante);
   void guardarEstado(estadoTransicion);
   setAlarmaActiva(true);
   void alarmService.play();
@@ -114,7 +121,13 @@ export function useTimer(): UseTimerReturn {
         }
         if ('tipo' in siguiente && siguiente.tipo === 'FASE_COMPLETADA') {
           const ev = siguiente as FaseCompletadaEvent;
-          manejarFaseCompletada(ev.faseAnterior, guardado, setState, setAlarmaActiva);
+          manejarFaseCompletada(
+            ev.faseAnterior,
+            guardado,
+            setState,
+            setTiempoMostrar,
+            setAlarmaActiva,
+          );
         } else {
           setState(siguiente as TimerState);
         }
@@ -132,7 +145,13 @@ export function useTimer(): UseTimerReturn {
     if (state.status !== 'corriendo') return;
     const restante = tiempoRestanteActual(state);
     if (restante <= 0) {
-      manejarFaseCompletada(state.fase, state, setState, setAlarmaActiva);
+      manejarFaseCompletada(
+        state.fase,
+        state,
+        setState,
+        setTiempoMostrar,
+        setAlarmaActiva,
+      );
     }
   }, [state]);
 
@@ -143,7 +162,13 @@ export function useTimer(): UseTimerReturn {
         const resultado = recalculateOnResume(state, ahoraEnSegundos());
         if ('tipo' in resultado && resultado.tipo === 'FASE_COMPLETADA') {
           const ev = resultado as FaseCompletadaEvent;
-          manejarFaseCompletada(ev.faseAnterior, state, setState, setAlarmaActiva);
+          manejarFaseCompletada(
+            ev.faseAnterior,
+            state,
+            setState,
+            setTiempoMostrar,
+            setAlarmaActiva,
+          );
         } else {
           persist(resultado as TimerState);
         }

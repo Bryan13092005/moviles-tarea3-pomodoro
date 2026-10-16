@@ -162,7 +162,33 @@ Hecho cuando:
 - `npx jest` pasa en su totalidad (suite completa).
 - Los 4 escenarios de HU-001 están cubiertos por pruebas (Esc. 1: RF-02/03; Esc. 2: RF-04; Esc. 3: RF-05/06; Esc. 4: RF-07).
 
-Resultado: `npx jest` → **29 passed**; `npx tsc --noEmit` → **limpio**; `npx expo lint` → **limpio**.
+Resultado: `npx jest` → **31 passed**; `npx tsc --noEmit` → **limpio**; `npx expo lint` → **limpio**.
+
+---
+
+## T-11 — Mostrar la siguiente fase preparada al terminar una fase ✅ HECHO
+
+**RF:** RF-10, RF-12, RF-14
+
+Corregir `src/hooks/useTimer.ts`: `manejarFaseCompletada` calculaba la siguiente fase
+detenida, pero nunca actualizaba `tiempoMostrar`, el estado separado que renderiza
+`TimerDisplay`. Por eso, al terminar una fase, la pantalla seguía mostrando el último
+valor del contador (~00:00) hasta que el usuario pulsaba "Iniciar".
+
+- Al completar una fase, fijar `tiempoMostrar` con la duración completa de esa siguiente
+  fase (el valor que devuelve `completePhase`), sin iniciarla (Decisión 2).
+
+Hecho cuando:
+- `npx jest` pasa en su totalidad (31 passed).
+- El cambio es una línea (`setTiempoMostrar(estadoTransicion.tiempoRestante)`) más el
+  hilo del setter en los tres puntos de llamada.
+- La fase siguiente queda detenida y su duración completa queda mostrada por `tiempoMostrar`.
+
+Resultado: `npx jest` → **31 passed**.
+
+Estado: **Código implementado y verificado con jest. Pendiente de tu confirmación manual
+en Expo Go: al terminar una fase debe mostrarse inmediatamente la siguiente fase detenida
+con su duración completa (RF-10, RF-12).**
 
 ---
 
