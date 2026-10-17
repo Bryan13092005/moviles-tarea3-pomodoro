@@ -8,6 +8,14 @@
  */
 
 import * as Notifications from 'expo-notifications';
+import { FasePomodoro } from '../constants/pomodoro';
+
+/** Nombre legible de cada fase para mostrar en la notificación (RF-01). */
+const NOMBRE_FASE: Record<FasePomodoro, string> = {
+  estudio: 'Estudio',
+  descansoCorto: 'Descanso Corto',
+  descansoLargo: 'Descanso Largo',
+};
 
 export interface IAlarmService {
   /** Solicita el permiso de notificaciones al SO. */
@@ -15,7 +23,7 @@ export interface IAlarmService {
   /** Indica si el permiso está habilitado. */
   hasPermission(): Promise<boolean>;
   /** Suena/vibra la alarma de fin de fase. */
-  play(): Promise<void>;
+  play(fase?: FasePomodoro): Promise<void>;
   /** Cancela notificaciones programadas (descarta alarma). */
   stop(): Promise<void>;
 }
@@ -56,11 +64,11 @@ export class ExpoAlarmService implements IAlarmService {
     return status.status === 'granted';
   }
 
-  async play(): Promise<void> {
+  async play(fase?: FasePomodoro): Promise<void> {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Pomodoro',
-        body: 'La fase ha finalizado.',
+        body: fase ? `¡Fase ${NOMBRE_FASE[fase]} finalizada!` : 'La fase ha finalizado.',
         sound: true,
         vibrate: [0, 250, 250, 250],
         priority: 'high' as const,

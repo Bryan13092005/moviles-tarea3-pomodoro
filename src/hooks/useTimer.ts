@@ -13,7 +13,7 @@
  * RF-02…RF-14, RF-08, RF-09, RNF-01, RNF-02.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import {
@@ -79,6 +79,7 @@ function manejarFaseCompletada(
   persist: (next: TimerState) => void,
   setTiempoMostrar: React.Dispatch<React.SetStateAction<number>>,
   setAlarmaActiva: (v: boolean) => void,
+  alarmTimeoutRef: React.MutableRefObject<number | null>,
 ) {
   const estadoTransicion = completePhase(
     { ...state, fase: faseAnterior },
@@ -87,7 +88,13 @@ function manejarFaseCompletada(
   persist(estadoTransicion);
   setTiempoMostrar(estadoTransicion.tiempoRestante);
   setAlarmaActiva(true);
-  void alarmService.play();
+  void alarmService.play(faseAnterior);
+  // RF-05: silencio automático a los 30 s sin interacción del usuario
+  alarmTimeoutRef.current = setTimeout(() => {
+    setAlarmaActiva(false);
+    alarmTimeoutRef.current = null;
+    void alarmService.stop();
+  }, 30_000);
 }
 
 export function useTimer(): UseTimerReturn {
@@ -99,6 +106,8 @@ export function useTimer(): UseTimerReturn {
   const [errorPersistencia, setErrorPersistencia] = useState<string | null>(null);
   /** Estado separado para forzar re-render cada segundo mientras corre. */
   const [tiempoMostrar, setTiempoMostrar] = useState(state.tiempoRestante);
+  /** ID del setTimeout de silencio automático a los 30 s (RF-05). */
+  const alarmTimeoutRef = useRef<number | null>(null);
 
   /**
    * Persiste el siguiente estado: setState + AsyncStorage.
@@ -135,6 +144,7 @@ export function useTimer(): UseTimerReturn {
             persist,
             setTiempoMostrar,
             setAlarmaActiva,
+            alarmTimeoutRef,
           );
         } else {
           setState(siguiente as TimerState);
@@ -145,6 +155,10 @@ export function useTimer(): UseTimerReturn {
     })();
     return () => {
       montado = false;
+      if (alarmTimeoutRef.current !== null) {
+        clearTimeout(alarmTimeoutRef.current);
+        alarmTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -164,9 +178,10 @@ export function useTimer(): UseTimerReturn {
         persist,
         setTiempoMostrar,
         setAlarmaActiva,
+        alarmTimeoutRef,
       );
     }
-  }, [state, tiempoMostrar]);
+  }, [state, tiempoMostrar, alarmTimeoutRef]);
 
   // --- Recalcular al volver de segundo plano / desbloquear dispositivo ---
   useEffect(() => {
@@ -181,6 +196,7 @@ export function useTimer(): UseTimerReturn {
             persist,
             setTiempoMostrar,
             setAlarmaActiva,
+            alarmTimeoutRef,
           );
         } else {
           persist(resultado as TimerState);
@@ -188,7 +204,7 @@ export function useTimer(): UseTimerReturn {
       }
     });
     return () => suscripcion.remove();
-  }, [state, persist]);
+  }, [state, persist, alarmTimeoutRef]);
 
   // --- Interval que actualiza tiempoMostrar cada segundo (RF-03) ---
   // Solo toca el estado de visualización, nunca el estado del temporizador.
@@ -272,6 +288,10 @@ export function useTimer(): UseTimerReturn {
 
   const detenerAlarma = useCallback(() => {
     setAlarmaActiva(false);
+    if (alarmTimeoutRef.current !== null) {
+      clearTimeout(alarmTimeoutRef.current);
+      alarmTimeoutRef.current = null;
+    }
     void alarmService.stop(); // RF-11
   }, []);
 

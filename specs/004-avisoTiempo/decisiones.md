@@ -47,3 +47,13 @@
 **Respuesta:** Cuando el usuario entra a la app después de detener la alarma, se muestra el alert de que la fase finalizó con el botón de aceptar y luego se renderiza el contenido de la siguiente etapa.
 
 **Motivo:** Da al usuario una confirmación clara de que la fase terminó antes de avanzar, y tras su aceptación explícita renderiza la siguiente etapa, manteniendo el control del usuario sobre el flujo (coherente con HU-001: acciones directas y control explícito del usuario).
+
+---
+
+## Decisión 6
+
+**Pregunta:** ¿Qué ocurre si la aplicación está cerrada cuando finaliza una fase: pueden acumularse varias alarmas pendientes de diferentes fases y suenan todas?
+
+**Respuesta:** No. Una fase solo puede finalizar si el usuario la inició presionando iniciar, y al terminar el aviso se queda esperando a que el usuario abra la aplicación y presione aceptar. Si la app está cerrada, pasaron los 30 segundos de alarma y el usuario no la abrió, únicamente se queda para mostrar el mensaje de fase terminado y que el usuario presione aceptar, sin iniciar automáticamente ninguna siguiente fase.
+
+**Motivo:** Cada fase requiere la aprobación explícita del usuario para empezar, por lo que no puede haber varias fases finales pendientes acumuladas; el control del flujo permanece en el usuario tras la aceptación explícita del fin de fase.

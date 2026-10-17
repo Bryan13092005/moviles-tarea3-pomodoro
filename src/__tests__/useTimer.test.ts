@@ -26,6 +26,8 @@ jest.mock('@/services/alarm', () => ({
     hasPermission: jest.fn(),
   },
 }));
+
+import { alarmService } from '@/services/alarm';
 jest.mock('@/services/permissions', () => ({
   solicitarPermisoAlarma: jest.fn(),
   MENSAJE_PERMISO_ALARMA: 'mensaje de permiso de prueba',
@@ -49,6 +51,7 @@ function renderHook() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.setSystemTime(1_000_000_000); // reloj falso determinista para cada prueba
   (cargarEstado as jest.Mock).mockResolvedValue(null);
   (solicitarPermisoAlarma as jest.Mock).mockResolvedValue(true);
   (guardarEstado as jest.Mock).mockResolvedValue(undefined);
@@ -124,6 +127,55 @@ describe('useTimer – permiso de notificaciones', () => {
     expect(hookResult.mostrarBannerPermiso).toBe(true);
     expect(hookResult.permisoConcedido).toBe(false);
     expect(guardarEstado).not.toHaveBeenCalled();
+  });
+});
+
+describe('useTimer – silencio automático del aviso (RF-05)', () => {
+  it('RF-05: al completar una fase y transcurrir 30 s sin interacción, alarmaActiva pasa a false y se llama a alarmService.stop', async () => {
+    // Una fase completada al montar dispara manejarFaseCompletada directamente
+    (cargarEstado as jest.Mock).mockResolvedValue({
+      tipo: 'FASE_COMPLETADA',
+      faseAnterior: 'estudio',
+    });
+
+    renderHook();
+    await act(async () => {});
+
+    expect(hookResult.alarmaActiva).toBe(true);
+    expect(alarmService.play).toHaveBeenCalledWith('estudio');
+
+    act(() => {
+      jest.advanceTimersByTime(30_000);
+    });
+
+    expect(hookResult.alarmaActiva).toBe(false);
+    expect(alarmService.stop).toHaveBeenCalled();
+  });
+
+  it('RF-05: detener la alarma antes de 30 s cancela el silencio automático', async () => {
+    (cargarEstado as jest.Mock).mockResolvedValue({
+      tipo: 'FASE_COMPLETADA',
+      faseAnterior: 'estudio',
+    });
+
+    renderHook();
+    await act(async () => {});
+
+    expect(hookResult.alarmaActiva).toBe(true);
+
+    act(() => {
+      hookResult.detenerAlarma();
+    });
+
+    expect(hookResult.alarmaActiva).toBe(false);
+    expect(alarmService.stop).toHaveBeenCalledTimes(1);
+
+    // Avanzar 30 s: el temporizador ya se limpió, no debe llamar stop de nuevo
+    act(() => {
+      jest.advanceTimersByTime(30_000);
+    });
+
+    expect(alarmService.stop).toHaveBeenCalledTimes(1);
   });
 });
 

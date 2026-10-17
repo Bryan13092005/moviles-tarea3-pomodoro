@@ -41,6 +41,17 @@ Cobertura de escenarios de HU-003 por pruebas:
 - RF-08/RF-09 (no reinicio automático; botón reinicio completo): T1/T4 + UI T7-T10 verificada en Expo Go.
 - RF-10 (bloquear inicio sin permiso): T6.
 
+Spec 004 — Aviso de Fin de Fase (HU-004): CERRADA / IMPLEMENTADA. spec.md aprobada; `plan.md` y `tasks.md` completados (5 tareas, specs/004-avisoTiempo/).
+
+Todas las 5 tareas implementadas (✅):
+- T1 Hook: `useRef` + `setTimeout` de 30 s en `manejarFaseCompletada`, limpieza en `detenerAlarma` y al desmontar, `alarmService.play(faseAnterior)` (RF-05, RF-10) — `src/hooks/useTimer.ts`
+- T2 Servicio: `IAlarmService.play(fase?)` e `ExpoAlarmService.play(fase?)` incluyen nombre de fase en `body` de notificación (RF-01) — `src/services/alarm.ts`
+- T3 Pruebas: 2 pruebas en `useTimer.test.ts` con fake timers — silencio a los 30 s y detención temprana cancela silencio (RF-05, RF-10)
+- T4 Pruebas: 2 pruebas en `alarm.test.ts` — `body` con nombre de fase + body por defecto sin fase (RF-01)
+- T5 Verificación: `npx jest` 54 pruebas verdes (4 suites), `npx tsc --noEmit` sin errores, `npx expo lint` sin errores nuevos (solo preexistentes de scaffold)
+
+npx jest: 54 pruebas verdes (4 suites: alarm, timerLogic, storage, useTimer). npx tsc --noEmit: sin errores.
+
 ## Próximos pasos
 
-Ninguno. Spec 003 cerrada. Siguiente: especificar/implementar la siguiente HU si aplica.
+Spec 004 — Aviso de Fin de Fase (HU-004): CERRADA / IMPLEMENTADA. No hay tareas pendientes de esta spec.

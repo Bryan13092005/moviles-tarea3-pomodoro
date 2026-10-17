@@ -21,4 +21,31 @@ describe('ExpoAlarmService', () => {
     new ExpoAlarmService();
     expect(Notifications.setNotificationHandler).toHaveBeenCalled();
   });
+
+  it('RF-01: play(fase) incluye el nombre de la fase finalizada en el body de la notificación', async () => {
+    const service = new ExpoAlarmService();
+    await service.play('descansoLargo');
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.objectContaining({
+          body: '¡Fase Descanso Largo finalizada!',
+          sound: true,
+          vibrate: [0, 250, 250, 250],
+          priority: 'high',
+        }),
+      }),
+    );
+  });
+
+  it('RF-01: play() sin fase conserva el body por defecto', async () => {
+    const service = new ExpoAlarmService();
+    await service.play();
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.objectContaining({
+          body: 'La fase ha finalizado.',
+        }),
+      }),
+    );
+  });
 });
