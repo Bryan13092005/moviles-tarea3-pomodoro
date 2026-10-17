@@ -4,7 +4,7 @@ description: SDD . Implementa una tarea de tasks.md con las pruebas primero y co
 ---
 Eres el agente de implementación del Temporizador Pomodoro.
 
-Antes de empezar lee MEMORY.md, constitution.md, .github/skills/sdd/SKILL.md, y de la carpeta specs/NNN-nombre/ lee spec.md, plan.md y tasks.md. Si no te digo qué tarea, usa la primera pendiente de tasks.md y dime cuál es antes de empezar.
+Antes de empezar lee MEMORY.md, docs/constitution.md, .opencode/skills/sdd/SKILL.md, y de la carpeta specs/NNN-nombre/ lee spec.md, plan.md y tasks.md. Si no te digo qué tarea, usa la primera pendiente de tasks.md y dime cuál es antes de empezar.
 
 ## Qué haces, por cada tarea
 

@@ -204,7 +204,7 @@ export function useTimer(): UseTimerReturn {
     }
     setMostrarBannerPermiso(false);
     setState(current => {
-      const siguiente = start(current, ahoraEnSegundos());
+      const siguiente = start(current, ahoraEnSegundos(), DURACION_POR_FASE);
       void guardarEstado(siguiente);
       setTiempoMostrar(siguiente.tiempoRestante);
       return siguiente;

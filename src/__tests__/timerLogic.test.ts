@@ -36,6 +36,7 @@ function estadoBase(overrides: Partial<TimerState> = {}): TimerState {
     duracionFase: 1500,
     pomodoros: 0,
     startedAt: null,
+    faseAnterior: null,
     ...overrides,
   };
 }
@@ -84,7 +85,7 @@ describe('durationFor', () => {
 describe('start', () => {
   it('detenido -> corriendo con startedAt = now', () => {
     const s = estadoBase();
-    const r = start(s, 1000);
+    const r = start(s, 1000, CONFIG_DURACIONES);
     expect(r.status).toBe('corriendo');
     expect(r.startedAt).toBe(1000);
     expect(r.tiempoRestante).toBe(1500);
@@ -92,17 +93,84 @@ describe('start', () => {
 
   it('ya corriendo -> no-op (no resetea startedAt)', () => {
     const s = estadoBase({ status: 'corriendo', startedAt: 500 });
-    const r = start(s, 9999);
+    const r = start(s, 9999, CONFIG_DURACIONES);
     expect(r.status).toBe('corriendo');
     expect(r.startedAt).toBe(500);
   });
 
   it('fase en 00:00 al iniciar -> restaura duración completa', () => {
     const s = estadoBase({ tiempoRestante: 0, duracionFase: 300 });
-    const r = start(s, 1000);
+    const r = start(s, 1000, CONFIG_DURACIONES);
     expect(r.tiempoRestante).toBe(300);
     expect(r.status).toBe('corriendo');
     expect(r.startedAt).toBe(1000);
+  });
+
+  it('RF-04: iniciar descanso corto incrementa pomodoros en 1', () => {
+    const s = estadoBase({
+      fase: 'descansoCorto',
+      pomodoros: 1,
+      faseAnterior: 'estudio',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.status).toBe('corriendo');
+    expect(r.pomodoros).toBe(2);
+  });
+
+  it('RF-04: iniciar descanso largo incrementa pomodoros en 1', () => {
+    const s = estadoBase({
+      fase: 'descansoLargo',
+      pomodoros: 3,
+      faseAnterior: 'estudio',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.pomodoros).toBe(4);
+  });
+
+  it('RF-04 / Decisión 6: iniciar descanso corto no excede el límite del ciclo', () => {
+    const s = estadoBase({
+      fase: 'descansoCorto',
+      pomodoros: 3,
+      faseAnterior: 'estudio',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.pomodoros).toBe(4); // tope del ciclo, no 5
+  });
+
+  it('Decisión 6: iniciar Descanso Largo con pomodoros en el límite se mantiene en cicloPomodoros', () => {
+    const s = estadoBase({
+      fase: 'descansoLargo',
+      pomodoros: 4,
+      faseAnterior: 'estudio',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.pomodoros).toBe(4); // no se incrementa más allá de 4 durante el ciclo cerrado
+  });
+
+  it('RF-05: iniciar estudio tras descanso largo resetea pomodoros a 0', () => {
+    const s = estadoBase({
+      fase: 'estudio',
+      pomodoros: 4,
+      faseAnterior: 'descansoLargo',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.pomodoros).toBe(0);
+  });
+
+  it('RF-05: iniciar estudio tras descanso corto NO resetea pomodoros', () => {
+    const s = estadoBase({
+      fase: 'estudio',
+      pomodoros: 2,
+      faseAnterior: 'descansoCorto',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.pomodoros).toBe(2);
+  });
+
+  it('iniciar estudio sin faseAnterior previa no resetea pomodoros', () => {
+    const s = estadoBase({ fase: 'estudio', pomodoros: 2, faseAnterior: null });
+    const r = start(s, 1000, CONFIG_DURACIONES);
+    expect(r.pomodoros).toBe(2);
   });
 });
 
@@ -162,6 +230,24 @@ describe('resetConfirmed / resetCancelled', () => {
     expect(r.pomodoros).toBe(2);
   });
 
+  it('resetConfirmed conserva fase y pomodoros sin incrementar (reinicio, no toca contador)', () => {
+    const s = estadoBase({
+      fase: 'descansoLargo',
+      pomodoros: 4,
+      faseAnterior: 'estudio',
+      status: 'corriendo',
+      tiempoRestante: 100,
+      startedAt: 123,
+      duracionFase: 900,
+    });
+    const r = resetConfirmed(s);
+    expect(r.fase).toBe('descansoLargo'); // misma etapa
+    expect(r.pomodoros).toBe(4); // no se incrementa al reiniciar
+    expect(r.status).toBe('detenido');
+    expect(r.tiempoRestante).toBe(900);
+    expect(r.startedAt).toBeNull();
+  });
+
   it('resetCancelled: estado inalterado', () => {
     const s = estadoBase({ tiempoRestante: 500, status: 'corriendo', pomodoros: 1 });
     const r = resetCancelled(s);
@@ -219,38 +305,44 @@ describe('tick', () => {
 });
 
 describe('completePhase', () => {
-  it('estudio -> descanso corto, pomodoros++, detenido, duración completa', () => {
+  it('estudio -> descanso corto, pomodoros NO se incrementan al terminar (RF-04)', () => {
     const s = estadoBase({ fase: 'estudio', pomodoros: 0 });
     const r = completePhase(s, CONFIG_DURACIONES);
     expect(r.fase).toBe('descansoCorto');
-    expect(r.pomodoros).toBe(1);
+    expect(r.pomodoros).toBe(0); // se incrementa solo al iniciar el descanso (Decisión 5)
     expect(r.status).toBe('detenido');
     expect(r.tiempoRestante).toBe(300);
     expect(r.startedAt).toBeNull();
+    expect(r.faseAnterior).toBe('estudio');
   });
 
-  it('al llegar a 4 pomodoros -> descanso largo y reinicia contador a 0', () => {
+  it('al llegar a 4 -> descanso largo, pomodoros se mantienen hasta iniciar (RF-02)', () => {
     const s = estadoBase({ fase: 'estudio', pomodoros: 3 });
     const r = completePhase(s, CONFIG_DURACIONES);
     expect(r.fase).toBe('descansoLargo');
-    expect(r.pomodoros).toBe(0);
+    expect(r.pomodoros).toBe(3); // no se toca al terminar estudio (Decisión 5/6)
     expect(r.tiempoRestante).toBe(900);
+    expect(r.status).toBe('detenido');
+    expect(r.startedAt).toBeNull();
+    expect(r.faseAnterior).toBe('estudio');
   });
 
-  it('descanso corto -> estudio, detenido, duración completa', () => {
+  it('descanso corto -> estudio, detenido, duración completa (RF-03)', () => {
     const s = estadoBase({ fase: 'descansoCorto', pomodoros: 2 });
     const r = completePhase(s, CONFIG_DURACIONES);
     expect(r.fase).toBe('estudio');
     expect(r.pomodoros).toBe(2);
     expect(r.status).toBe('detenido');
     expect(r.tiempoRestante).toBe(1500);
+    expect(r.faseAnterior).toBe('descansoCorto');
   });
 
-  it('descanso largo -> estudio, detenido, duración completa', () => {
+  it('descanso largo -> estudio, detenido, duración completa (RF-03)', () => {
     const s = estadoBase({ fase: 'descansoLargo', pomodoros: 0 });
     const r = completePhase(s, CONFIG_DURACIONES);
     expect(r.fase).toBe('estudio');
     expect(r.tiempoRestante).toBe(1500);
+    expect(r.faseAnterior).toBe('descansoLargo');
   });
 });
 

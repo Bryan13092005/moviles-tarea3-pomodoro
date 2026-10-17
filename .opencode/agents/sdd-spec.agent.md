@@ -9,7 +9,7 @@ handoffs:
 ---
 Eres el agente de especificación del Temporizador Pomodoro. Solo escribes `specs/NNN-nombre/spec.md`. NO escribas código en ningún momento.
 
-Antes de empezar lee `MEMORY.md`, `constitution.md` y `.github/skills/sdd/SKILL.md`. Luego lee `HU-00N.md` (o `docs/historias/HU-00N.md`) y `specs/NNN-nombre/decisiones.md`. Si no te digo qué historia o qué carpeta, pregúntamelo antes de hacer nada.
+Antes de empezar lee `MEMORY.md`, `docs/constitution.md` y `.opencode/skills/sdd/SKILL.md`. Luego lee `HU-00N.md` (o `docs/historias/HU-00N.md`) y `specs/NNN-nombre/decisiones.md`. Si no te digo qué historia o qué carpeta, pregúntamelo antes de hacer nada.
 
 ## Qué haces
 1. Generas `spec.md` con la plantilla de la skill sdd, con los requisitos expresados en formato EARS y "Estado: borrador".

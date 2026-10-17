@@ -2,12 +2,18 @@
 
 /**
  * Pruebas de persistencia del temporizador con AsyncStorage (mockeado).
- * RF-13, RNF-01, Decisión 3, Constitución 1.1/1.2/4.
+ * RF-08, RF-09, RNF-01, Constitución 1.1/1.2/4.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { guardarEstado, cargarEstado } from '../services/storage';
-import { initialState } from '../domain/timer';
+import {
+  initialState,
+  recalculateOnResume,
+  type FaseCompletadaEvent,
+  type TimerState,
+  type TickResult,
+} from '../domain/timer';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store: Record<string, string> = {};
@@ -32,11 +38,15 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   return modulo;
 });
 
-const MOCK_STATE = {
+const MOCK_STATE: TimerState = {
   ...initialState(),
-  tiempoRestante: 1200,
-  pomodoros: 1,
-  status: 'pausado' as const,
+  fase: 'descansoLargo',
+  status: 'pausado',
+  tiempoRestante: 600,
+  duracionFase: 900,
+  pomodoros: 4,
+  startedAt: null,
+  faseAnterior: 'estudio',
 };
 
 describe('storage', () => {
@@ -46,7 +56,7 @@ describe('storage', () => {
     (AsyncStorage as any).__store = {};
   });
 
-  it('guarda y carga el estado correctamente', async () => {
+  it('guarda y carga el estado correctamente, incluyendo faseAnterior y pomodoros (RF-08, RNF-01)', async () => {
     await guardarEstado(MOCK_STATE);
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       '@pomodoro/state',
@@ -55,6 +65,8 @@ describe('storage', () => {
 
     const cargado = await cargarEstado();
     expect(cargado).toEqual(MOCK_STATE);
+    expect(cargado?.faseAnterior).toBe('estudio');
+    expect(cargado?.pomodoros).toBe(4);
     expect(AsyncStorage.getItem).toHaveBeenCalledWith('@pomodoro/state');
   });
 
@@ -65,9 +77,42 @@ describe('storage', () => {
 
   it('sobrescribe el estado previo al guardar de nuevo', async () => {
     await guardarEstado(MOCK_STATE);
-    const modificado = { ...MOCK_STATE, tiempoRestante: 600 };
+    const modificado = { ...MOCK_STATE, tiempoRestante: 300 };
     await guardarEstado(modificado);
     const cargado = await cargarEstado();
-    expect(cargado?.tiempoRestante).toBe(600);
+    expect(cargado?.tiempoRestante).toBe(300);
+  });
+
+  it('RF-08: fase pausada al reabrir conserva el tiempo restante sin descontar', async () => {
+    await guardarEstado(MOCK_STATE);
+    const cargado = await cargarEstado();
+    expect(cargado?.status).toBe('pausado');
+    expect(cargado?.tiempoRestante).toBe(600); // sin descontar
+    expect(cargado?.startedAt).toBeNull();
+  });
+
+  it('RF-09: fase corriendo expirada al reabrir devuelve evento FASE_COMPLETADA', async () => {
+    const expirado: TimerState = {
+      ...initialState(),
+      fase: 'estudio',
+      status: 'corriendo',
+      tiempoRestante: 5,
+      duracionFase: 1500,
+      pomodoros: 0,
+      startedAt: 100,
+      faseAnterior: null,
+    };
+    await guardarEstado(expirado);
+    const cargado = await cargarEstado();
+    expect(cargado).not.toBeNull();
+
+    // Al recalcular con un now mucho mayor, la fase expiró (RF-09)
+    const resultado = recalculateOnResume(
+      cargado as TimerState,
+      200,
+    ) as TickResult | TimerState;
+    const ev = resultado as FaseCompletadaEvent;
+    expect(ev.tipo).toBe('FASE_COMPLETADA');
+    expect(ev.faseAnterior).toBe('estudio');
   });
 });

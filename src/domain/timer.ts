@@ -28,6 +28,8 @@ export interface TimerState {
   pomodoros: number;
   /** Timestamp en que se puso el temporizador en 'corriendo', o null. */
   startedAt: number | null;
+  /** Fase completada inmediatamente antes de la actual (null al instalar). */
+  faseAnterior: FasePomodoro | null;
 }
 
 export type FaseCompletadaEvent = {
@@ -49,6 +51,7 @@ export function initialState(): TimerState {
     duracionFase: DURACION_POR_FASE.estudio,
     pomodoros: 0,
     startedAt: null,
+    faseAnterior: null,
   };
 }
 
@@ -71,19 +74,35 @@ export function formatMMSS(segundos: number): string {
  * Inicia el temporizador si está detenido.
  * Si el tiempo restante es 0 (fase completa), lo restaura a la duración completa.
  * Si ya está corriendo, no-op.
- * (RF-02, caso límite)
+ * Nuevo (Spec 002):
+ * - al iniciar un descanso (corto o largo) incrementa pomodoros en 1 (RF-04, Decisión 5);
+ * - al iniciar estudio con faseAnterior === 'descansoLargo' resetea pomodoros a 0 (RF-05, Decisión 6).
+ * `duraciones` se recibe por consistencia con completePhase; el valor de inicio de la
+ * fase en curso se conserva en state.duracionFase (RF-07).
  */
-export function start(state: TimerState, now: number): TimerState {
+export function start(
+  state: TimerState,
+  now: number,
+  duraciones: Record<FasePomodoro, number>,
+): TimerState {
   if (state.status === 'corriendo') {
     return state;
   }
   const tiempoRestante =
     state.tiempoRestante <= 0 ? state.duracionFase : state.tiempoRestante;
+  let nuevosPomodoros = state.pomodoros;
+  if (state.fase === 'descansoCorto' || state.fase === 'descansoLargo') {
+    nuevosPomodoros = Math.min(state.pomodoros + 1, POMODORO_CONFIG.cicloPomodoros); // RF-04; Decisión 6: no excede el límite del ciclo (evita 5/4, 6/4… al reiniciar+e iniciar un descanso)
+  }
+  if (state.fase === 'estudio' && state.faseAnterior === 'descansoLargo') {
+    nuevosPomodoros = 0; // RF-05
+  }
   return {
     ...state,
     status: 'corriendo',
     startedAt: now,
     tiempoRestante,
+    pomodoros: nuevosPomodoros,
   };
 }
 
@@ -163,38 +182,40 @@ export function tick(state: TimerState, now: number): TickResult {
 
 /**
  * Completa la fase actual: suena la alarma (efecto manejado en el hook),
- * avanza a la siguiente fase detenida con su duración completa.
- * Estudio -> descanso corto; al llegar al límite -> descanso largo y pomodoros = 0.
- * Descanso -> Estudio.
- * (RF-10, RF-12, Decisión 1/2/7, Constitución 2.2)
+ * avanza a la siguiente fase detenida con su duración completa (sin iniciarla automáticamente).
+ * Estudio -> Descanso Corto, o Descanso Largo si pomodoros + 1 >= cicloPomodoros (RF-01/RF-02).
+ * Descanso -> Estudio (RF-03).
+ * Los pomodoros NO se modifican aquí: se incrementan al iniciar el descanso (RF-04, Decisión 5)
+ * y se reinician al iniciar estudio tras Descanso Largo (RF-05, Decisión 6).
+ * Guarda faseAnterior para que start() pueda aplicar RF-05.
+ * (Decisión 1, Constitución 2.2)
  */
 export function completePhase(
   state: TimerState,
   duraciones: Record<FasePomodoro, number>,
 ): TimerState {
   let siguienteFase: FasePomodoro;
-  let nuevosPomodoros = state.pomodoros;
 
   if (state.fase === 'estudio') {
-    nuevosPomodoros = state.pomodoros + 1;
-    if (nuevosPomodoros >= POMODORO_CONFIG.cicloPomodoros) {
-      siguienteFase = 'descansoLargo';
-      nuevosPomodoros = 0;
+    const pomodorosSiguiente = state.pomodoros + 1;
+    if (pomodorosSiguiente >= POMODORO_CONFIG.cicloPomodoros) {
+      siguienteFase = 'descansoLargo'; // RF-02
     } else {
-      siguienteFase = 'descansoCorto';
+      siguienteFase = 'descansoCorto'; // RF-01
     }
   } else {
-    siguienteFase = 'estudio';
+    siguienteFase = 'estudio'; // RF-03
   }
 
   return {
     ...state,
     fase: siguienteFase,
+    faseAnterior: state.fase,
     status: 'detenido',
     startedAt: null,
-    tiempoRestante: duraciones[siguienteFase],
-    duracionFase: duraciones[siguienteFase],
-    pomodoros: nuevosPomodoros,
+    tiempoRestante: duraciones[siguienteFase], // duración completa de la siguiente (RF-07)
+    duracionFase: duraciones[siguienteFase],   // valor con el que empieza (RF-07)
+    // pomodoros se conserva intacto (no se incrementa ni reinicia aquí)
   };
 }
 

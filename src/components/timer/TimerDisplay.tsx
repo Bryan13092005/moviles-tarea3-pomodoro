@@ -1,6 +1,8 @@
 /**
  * Muestra la fase actual, el tiempo restante en MM:SS y los pomodoros del ciclo.
- * RF-03, RF-14, Constitución §2.2.
+ * RF-06: fase actual (Estudio, Descanso Corto o Descanso Largo), tiempo restante
+ * en formato MM:SS y número de pomodoros completados en el ciclo actual
+ * (incluido 4/4 durante Descanso Largo). Constitución §2.2.
  */
 
 import { StyleSheet } from 'react-native';
@@ -25,7 +27,7 @@ export type TimerDisplayProps = {
     startedAt: number | null;
     duracionFase: number;
   };
-  tiempoMostrar: number;
+  tiempoMostrar: number; // tiempo restante calculado en tiempo real para mostrar
 };
 
 export function TimerDisplay({
@@ -36,13 +38,28 @@ export function TimerDisplay({
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="subtitle" style={styles.fase}>
+      <ThemedText
+        type="subtitle"
+        style={styles.fase}
+        accessibilityLabel={`Fase: ${etiqueta}`}
+        accessibilityRole="text"
+      >
         {etiqueta}
       </ThemedText>
-      <ThemedText type="title" style={styles.cronometro}>
+      <ThemedText
+        type="title"
+        style={styles.cronometro}
+        accessibilityLabel={`Tiempo restante ${formatMMSS(tiempoMostrar)}`}
+        accessibilityRole="text"
+      >
         {formatMMSS(tiempoMostrar)}
       </ThemedText>
-      <ThemedText type="smallBold" style={styles.pomodoros}>
+      <ThemedText
+        type="smallBold"
+        style={styles.pomodoros}
+        accessibilityLabel={`Pomodoros: ${state.pomodoros} de 4`}
+        accessibilityRole="text"
+      >
         Pomodoros: {state.pomodoros}/4
       </ThemedText>
     </ThemedView>
