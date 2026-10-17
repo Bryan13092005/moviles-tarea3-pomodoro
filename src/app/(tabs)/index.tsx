@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlarmDialog } from '@/components/timer/AlarmDialog';
 import { ConfirmResetDialog } from '@/components/timer/ConfirmResetDialog';
+import { ErrorPersistenciaBanner } from '@/components/timer/ErrorPersistenciaBanner';
 import { PermissionBanner } from '@/components/timer/PermissionBanner';
+import { ReinicioCompletoPomodoro } from '@/components/timer/ReinicioCompletoPomodoro';
 import { TimerControls } from '@/components/timer/TimerControls';
 import { TimerDisplay } from '@/components/timer/TimerDisplay';
 import { ThemedView } from '@/components/themed-view';
@@ -20,15 +22,19 @@ export default function HomeScreen() {
     permisoConcedido,
     mostrarBannerPermiso,
     mensajePermiso,
+    errorPersistencia,
     iniciar,
     pausar,
     reanudar,
     solicitarReinicio,
+    reiniciarCompleto,
     detenerAlarma,
     solicitarPermiso,
   } = useTimer();
 
   const [mostrarConfirmacionReinicio, setMostrarConfirmacionReinicio] =
+    useState(false);
+  const [mostrarConfirmacionReinicioCompleto, setMostrarConfirmacionReinicioCompleto] =
     useState(false);
 
   const estaCorriendo = state.status === 'corriendo';
@@ -37,13 +43,20 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        {errorPersistencia && (
+          <ErrorPersistenciaBanner
+            mensaje={errorPersistencia}
+            onCerrar={() => {
+              // Se limpia desde el hook al persistir correctamente o al reiniciar.
+            }}
+          />
+        )}
         {mostrarBannerPermiso && permisoConcedido === false && (
           <PermissionBanner
             mensaje={mensajePermiso}
             onHabilitar={solicitarPermiso}
             onCerrar={() => {
-              // No navega; solo oculta el banner. El usuario podrá volver a
-              // solicitar el permiso al intentar iniciar/reanudar.
+              // No navega; solo oculta el banner.
             }}
           />
         )}
@@ -63,6 +76,11 @@ export default function HomeScreen() {
           }
           onReiniciar={() => setMostrarConfirmacionReinicio(true)}
         />
+        <ReinicioCompletoPomodoro
+          onReiniciarCompleto={() =>
+            setMostrarConfirmacionReinicioCompleto(true)
+          }
+        />
         <ConfirmResetDialog
           visible={mostrarConfirmacionReinicio}
           onAceptar={() => {
@@ -70,6 +88,18 @@ export default function HomeScreen() {
             solicitarReinicio(true);
           }}
           onCancelar={() => setMostrarConfirmacionReinicio(false)}
+        />
+        <ConfirmResetDialog
+          visible={mostrarConfirmacionReinicioCompleto}
+          titulo="¿Reiniciar completamente el pomodoro?"
+          descripcion={
+            'Volverá a la fase de Estudio con 25:00 y se reiniciará el contador de pomodoros.'
+          }
+          onAceptar={() => {
+            setMostrarConfirmacionReinicioCompleto(false);
+            reiniciarCompleto();
+          }}
+          onCancelar={() => setMostrarConfirmacionReinicioCompleto(false)}
         />
         <AlarmDialog
           visible={alarmaActiva}

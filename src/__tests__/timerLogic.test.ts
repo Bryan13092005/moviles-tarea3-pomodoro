@@ -17,6 +17,7 @@ import {
   tick,
   completePhase,
   recalculateOnResume,
+  reinicioCompleto,
   type FaseCompletadaEvent,
   type TimerState,
   type TickResult,
@@ -365,5 +366,20 @@ describe('recalculateOnResume', () => {
     const s = estadoBase({ status: 'corriendo', tiempoRestante: 5, startedAt: 100 });
     const r = recalculateOnResume(s, 200) as TickResult;
     expect((r as FaseCompletadaEvent).tipo).toBe('FASE_COMPLETADA');
+  });
+});
+
+describe('reinicioCompleto', () => {
+  it('RF-08/RF-09: devuelve exactamente el estado inicial del pomodoro', () => {
+    const r = reinicioCompleto();
+    const esperado = initialState();
+    expect(r).toEqual(esperado);
+    expect(r.fase).toBe('estudio');
+    expect(r.status).toBe('detenido');
+    expect(r.tiempoRestante).toBe(1500);
+    expect(r.duracionFase).toBe(1500);
+    expect(r.pomodoros).toBe(0);
+    expect(r.startedAt).toBeNull();
+    expect(r.faseAnterior).toBeNull();
   });
 });

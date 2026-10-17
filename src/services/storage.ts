@@ -16,7 +16,14 @@ const CLAVE = '@pomodoro/state';
  * Constitución §4: evitar pérdida de estado si el SO mata la app.
  */
 export async function guardarEstado(state: TimerState): Promise<void> {
-  await AsyncStorage.setItem(CLAVE, JSON.stringify(state));
+  try {
+    await AsyncStorage.setItem(CLAVE, JSON.stringify(state));
+  } catch (error: unknown) {
+    // RF-05: no bloquear la app por una falla de almacenamiento; propagar el
+    // motivo para que el hook lo exponga en un banner no bloqueante.
+    const mensaje = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error al guardar el estado: ${mensaje}`);
+  }
 }
 
 /**

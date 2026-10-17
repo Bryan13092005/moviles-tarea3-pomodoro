@@ -220,6 +220,16 @@ export function completePhase(
 }
 
 /**
+ * Reinicio completo de pomodoro: devuelve el estado inicial del pomodoro
+ * (fase Estudio, 25:00, detenido, 0 pomodoros, startedAt/faseAnterior nulos).
+ * No recibe parámetros; es la función base del botón "Reinicio Completo de
+ * Pomodoro" (RF-08, RF-09).
+ */
+export function reinicioCompleto(): TimerState {
+  return initialState();
+}
+
+/**
  * Recalcula al reabrir la app.
  * - Pausado: conserva el restante sin descontar.
  * - Corriendo: restante = restante_guardado - (now - startedAt).

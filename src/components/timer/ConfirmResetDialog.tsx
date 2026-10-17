@@ -14,23 +14,29 @@ export type ConfirmResetDialogProps = {
   visible: boolean;
   onAceptar: () => void;
   onCancelar: () => void;
+  /** Título opcional para personalizar el diálogo (p. ej. reinicio completo). */
+  titulo?: string;
+  /** Descripción opcional para personalizar el diálogo. */
+  descripcion?: string;
 };
 
 export function ConfirmResetDialog({
   visible,
   onAceptar,
   onCancelar,
+  titulo,
+  descripcion,
 }: ConfirmResetDialogProps) {
   return (
     <Modal transparent visible={visible} onRequestClose={onCancelar}>
       <ThemedView style={styles.overlay}>
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="subtitle" style={styles.titulo}>
-            ¿Reiniciar el temporizador?
+            {titulo ?? '¿Reiniciar el temporizador?'}
           </ThemedText>
           <ThemedText type="default" style={styles.descripcion}>
-            Volverá a la duración completa de la fase actual y quedará
-            detenido.
+            {descripcion ??
+              'Volverá a la duración completa de la fase actual y quedará detenido.'}
           </ThemedText>
           <View style={styles.botones}>
             <Pressable style={styles.boton} onPress={onCancelar}>

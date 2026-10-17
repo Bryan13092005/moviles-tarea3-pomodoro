@@ -115,4 +115,11 @@ describe('storage', () => {
     expect(ev.tipo).toBe('FASE_COMPLETADA');
     expect(ev.faseAnterior).toBe('estudio');
   });
+
+  it('RF-05: AsyncStorage rechaza setItem -> guardarEstado rechaza con el motivo y no lanza sincrónicamente', async () => {
+    const motivo = 'No hay espacio en el dispositivo';
+    (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error(motivo));
+    // Debe rechazar la promesa con el motivo (no lanzar de forma síncrona ni bloquear)
+    await expect(guardarEstado(MOCK_STATE)).rejects.toThrow(motivo);
+  });
 });

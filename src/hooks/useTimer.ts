@@ -24,6 +24,7 @@ import {
   resetConfirmed,
   completePhase,
   recalculateOnResume,
+  reinicioCompleto,
   type TimerState,
   type TickResult,
   type FaseCompletadaEvent,
@@ -55,10 +56,12 @@ export interface UseTimerReturn {
   permisoConcedido: boolean | null; // null = aún no consultado
   mostrarBannerPermiso: boolean;
   mensajePermiso: string;
+  errorPersistencia: string | null;
   iniciar: () => Promise<void>;
   pausar: () => Promise<void>;
   reanudar: () => Promise<void>;
   solicitarReinicio: (aceptar: boolean) => Promise<void>;
+  reiniciarCompleto: () => Promise<void>;
   detenerAlarma: () => void;
   solicitarPermiso: () => Promise<void>;
 }
@@ -73,7 +76,7 @@ export interface UseTimerReturn {
 function manejarFaseCompletada(
   faseAnterior: FaseCompletadaEvent['faseAnterior'],
   state: TimerState,
-  setState: React.Dispatch<React.SetStateAction<TimerState>>,
+  persist: (next: TimerState) => void,
   setTiempoMostrar: React.Dispatch<React.SetStateAction<number>>,
   setAlarmaActiva: (v: boolean) => void,
 ) {
@@ -81,9 +84,8 @@ function manejarFaseCompletada(
     { ...state, fase: faseAnterior },
     DURACION_POR_FASE,
   );
-  setState(estadoTransicion);
+  persist(estadoTransicion);
   setTiempoMostrar(estadoTransicion.tiempoRestante);
-  void guardarEstado(estadoTransicion);
   setAlarmaActiva(true);
   void alarmService.play();
 }
@@ -93,16 +95,22 @@ export function useTimer(): UseTimerReturn {
   const [alarmaActiva, setAlarmaActiva] = useState(false);
   const [permisoConcedido, setPermisoConcedido] = useState<boolean | null>(null);
   const [mostrarBannerPermiso, setMostrarBannerPermiso] = useState(false);
+  /** Motivo del último fallo de persistencia (RF-05). null = sin fallo. */
+  const [errorPersistencia, setErrorPersistencia] = useState<string | null>(null);
   /** Estado separado para forzar re-render cada segundo mientras corre. */
   const [tiempoMostrar, setTiempoMostrar] = useState(state.tiempoRestante);
 
   /**
    * Persiste el siguiente estado: setState + AsyncStorage.
+   * Si guardarEstado falla, guarda el motivo en errorPersistencia sin
+   * bloquear la aplicación (RF-05).
    */
   const persist = useCallback(
     (next: TimerState) => {
       setState(next);
-      void guardarEstado(next);
+      guardarEstado(next).catch((error) => {
+        setErrorPersistencia(error instanceof Error ? error.message : String(error));
+      });
     },
     [],
   );
@@ -124,7 +132,7 @@ export function useTimer(): UseTimerReturn {
           manejarFaseCompletada(
             ev.faseAnterior,
             guardado,
-            setState,
+            persist,
             setTiempoMostrar,
             setAlarmaActiva,
           );
@@ -153,7 +161,7 @@ export function useTimer(): UseTimerReturn {
       manejarFaseCompletada(
         state.fase,
         state,
-        setState,
+        persist,
         setTiempoMostrar,
         setAlarmaActiva,
       );
@@ -170,7 +178,7 @@ export function useTimer(): UseTimerReturn {
           manejarFaseCompletada(
             ev.faseAnterior,
             state,
-            setState,
+            persist,
             setTiempoMostrar,
             setAlarmaActiva,
           );
@@ -205,7 +213,7 @@ export function useTimer(): UseTimerReturn {
     setMostrarBannerPermiso(false);
     setState(current => {
       const siguiente = start(current, ahoraEnSegundos(), DURACION_POR_FASE);
-      void guardarEstado(siguiente);
+      persist(siguiente);
       setTiempoMostrar(siguiente.tiempoRestante);
       return siguiente;
     });
@@ -214,7 +222,7 @@ export function useTimer(): UseTimerReturn {
   const pausar = useCallback(async () => {
     setState(current => {
       const siguiente = pause(current, ahoraEnSegundos());
-      void guardarEstado(siguiente);
+      persist(siguiente);
       setTiempoMostrar(siguiente.tiempoRestante);
       return siguiente;
     });
@@ -232,7 +240,7 @@ export function useTimer(): UseTimerReturn {
     setState(current => {
       if (current.status !== 'pausado') return current;
       const siguiente = resume(current, ahoraEnSegundos());
-      void guardarEstado(siguiente);
+      persist(siguiente);
       return siguiente;
     });
   }, []);
@@ -246,13 +254,21 @@ export function useTimer(): UseTimerReturn {
       // RF-05 / RF-06: confirmar reinicio -> duración completa, detenido, misma fase
       setState(current => {
         const siguiente = resetConfirmed(current);
-        void guardarEstado(siguiente);
+        persist(siguiente);
         setTiempoMostrar(siguiente.tiempoRestante);
         return siguiente;
       });
     },
     [],
   );
+
+  const reiniciarCompleto = useCallback(async () => {
+    // RF-08/RF-09: devuelve todo al estado inicial del pomodoro y persiste
+    const siguiente = reinicioCompleto();
+    setState(siguiente);
+    setTiempoMostrar(siguiente.tiempoRestante);
+    persist(siguiente);
+  }, []);
 
   const detenerAlarma = useCallback(() => {
     setAlarmaActiva(false);
@@ -272,10 +288,12 @@ export function useTimer(): UseTimerReturn {
     permisoConcedido,
     mostrarBannerPermiso,
     mensajePermiso: MENSAJE_PERMISO_ALARMA,
+    errorPersistencia,
     iniciar,
     pausar,
     reanudar,
     solicitarReinicio,
+    reiniciarCompleto,
     detenerAlarma,
     solicitarPermiso,
   };
