@@ -141,6 +141,11 @@ export function useTimer(): UseTimerReturn {
   }, []);
 
   // --- Detectar fin de fase por timestamps (RF-03, RF-10, RF-12) ---
+  // Depende también de `tiempoMostrar` para ejecutarse cada segundo mientras
+  // el temporizador corre y detectar cuando el tiempo llega a 0. Sin esto,
+  // el effect solo se ejecuta cuando cambia `state` (que no ocurre cada
+  // segundo durante el conteo), por lo que el fin de fase no se detecta
+  // en tiempo real mientras la app está abierta (RF-10).
   useEffect(() => {
     if (state.status !== 'corriendo') return;
     const restante = tiempoRestanteActual(state);
@@ -153,7 +158,7 @@ export function useTimer(): UseTimerReturn {
         setAlarmaActiva,
       );
     }
-  }, [state]);
+  }, [state, tiempoMostrar]);
 
   // --- Recalcular al volver de segundo plano / desbloquear dispositivo ---
   useEffect(() => {

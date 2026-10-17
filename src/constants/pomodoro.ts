@@ -5,7 +5,7 @@
 
 export const POMODORO_CONFIG = {
   /** Tiempo de Estudio: 25 minutos (1500 s) */
-  estudio: 25 * 60,
+  estudio: 1 * 60,
   /** Descanso Corto: 5 minutos (300 s) */
   descansoCorto: 5 * 60,
   /** Descanso Largo: 15 minutos (900 s) */

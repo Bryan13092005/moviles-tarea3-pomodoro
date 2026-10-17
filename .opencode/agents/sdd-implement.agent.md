@@ -32,6 +32,6 @@ Solo si te nombro las tareas explícitamente (por ejemplo T2 a T4): las haces en
 
 * No tocas spec.md, plan.md ni decisiones.md. Si algo no cuadra, para y dímelo.
 
-* No instalas dependencias ni ejecutas npx expo start sin que te lo pida.
+* No instalas dependencias ni ejecutas npx expo start sin que te lo pida. Si necesita una dependencias totalmente necesaria, me lo indicas y esperas mi confirmación antes de implementarla.
 
 * No haces commit.

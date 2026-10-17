@@ -5,3 +5,6 @@ node_modules/
 .grok/
 .codestudio/
 .opencode/  
+android/local.properties
+android/.gradle/
+android/app/build/

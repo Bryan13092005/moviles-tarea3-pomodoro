@@ -192,6 +192,57 @@ con su duración completa (RF-10, RF-12).**
 
 ---
 
+## T-12 — Presentar la alarma en primer plano mientras la app está abierta ✅ HECHO
+
+**RF:** RF-10, Constitución 1.3, Decisión 1
+
+Registrar el manejador de notificaciones (`Notifications.setNotificationHandler`) en el
+constructor de `ExpoAlarmService` (`src/services/alarm.ts`). Expo solo programa la
+notificación con `trigger: null`; la presentación depende de ese manejador. Sin él, la
+alarma programada no se muestra mientras la aplicación está en primer plano.
+
+- El manejador debe presentar la alarma: banner, sonido y prioridad alta.
+- `src/__tests__/alarm.test.ts` verifica que se registra al construir el servicio.
+
+Hecho cuando:
+- `npx jest` pasa en su totalidad (32 passed).
+- El cambio consiste en el constructor y el manejador; no se altera `play`/`stop`.
+
+Resultado: `npx jest` → **32 passed**.
+
+Estado: **Código implementado y verificado con jest. Pendiente de tu confirmación manual
+en Expo Go: la alarma debe mostrarse en pantalla aunque la aplicación esté abierta
+(RF-10).**
+
+---
+
+## T-13 — Detectar fin de fase en tiempo real mientras la app está abierta ✅ HECHO
+
+**RF:** RF-03, RF-10, RF-12
+
+Corregir `src/hooks/useTimer.ts`: el `useEffect` de detección de fin de fase
+dependía solo de `[state]`, pero `state` no cambia cada segundo durante el
+conteo (solo cambia `tiempoMostrar` vía interval). Por eso el fin de fase no se
+detectaba en tiempo real mientras la app estaba en primer plano, y el tiempo
+se quedaba en 00:00 hasta que el usuario hacía otra acción.
+
+- Agregar `tiempoMostrar` como dependencia del `useEffect` de detección, para
+  que se ejecute cada segundo y llame a `manejarFaseCompletada` cuando el
+  tiempo llega a 0. Así `tiempoMostrar` se actualiza inmediatamente a la
+  duración completa de la siguiente fase (sin iniciarla, Decisión 2).
+
+Hecho cuando:
+- `npx jest` pasa en su totalidad (32 passed).
+- El `useEffect` de detección ahora depende de `[state, tiempoMostrar]`.
+
+Resultado: `npx jest` → **32 passed**.
+
+Estado: **Código implementado y verificado con jest. Pendiente de tu confirmación manual
+en Expo Go: al terminar una fase, el tiempo debe actualizarse inmediatamente al
+valor de la siguiente fase detenida, sin salir y volver a entrar (RF-10, RF-12).**
+
+---
+
 ## Refactor: estructura `app/(tabs)` (grupo de rutas de Expo Router)
 
 Solicitado por el usuario tras T10. Se movieron las pantallas y layout de navegación a carpeta de grupo `(tabs)` para que Expo Router las trate como rutas con pestañas sin afectar las URLs públicas (`/` y `/explore` siguen igual).
