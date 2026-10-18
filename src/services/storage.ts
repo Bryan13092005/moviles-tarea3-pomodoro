@@ -36,7 +36,18 @@ export async function cargarEstado(): Promise<TimerState | null> {
   if (raw === null) {
     return null;
   }
-  return JSON.parse(raw) as TimerState;
+  try {
+    const parsed = JSON.parse(raw) as TimerState;
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('El estado guardado no es un objeto válido');
+    }
+    return parsed;
+  } catch (error: unknown) {
+    // RF-04: distinguir "no hay previo" (null → fábrica) de "datos corruptos"
+    // (error visible y la app no inicia).
+    const mensaje = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error al leer el estado guardado: ${mensaje}`);
+  }
 }
 
 /**

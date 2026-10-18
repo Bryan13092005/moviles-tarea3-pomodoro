@@ -8,20 +8,21 @@ import {
   Modal,
 } from 'react-native';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlarmDialog } from '@/components/timer/AlarmDialog';
 import { ConfirmResetDialog } from '@/components/timer/ConfirmResetDialog';
 import { ErrorPersistenciaBanner } from '@/components/timer/ErrorPersistenciaBanner';
 import { PermissionBanner } from '@/components/timer/PermissionBanner';
 import { TimerNotification } from '@/components/timer/TimerNotification';
+import { ErrorCargaBanner } from '@/components/timer/ErrorCargaBanner';
 import { ReinicioCompletoPomodoro } from '@/components/timer/ReinicioCompletoPomodoro';
 import { TimerControls } from '@/components/timer/TimerControls';
 import { TimerDisplay } from '@/components/timer/TimerDisplay';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, Spacing, TouchMinHeight, TouchMinWidth } from '@/constants/theme';
+import { Spacing, TouchMinHeight, TouchMinWidth } from '@/constants/theme';
 import { useTimer } from '@/hooks/useTimer';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -34,7 +35,6 @@ import {
 
 export default function HomeScreen() {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const {
     state,
     tiempoMostrar,
@@ -43,6 +43,9 @@ export default function HomeScreen() {
     mostrarBannerPermiso,
     mensajePermiso,
     errorPersistencia,
+    errorCarga,
+    reintentarCarga,
+    limpiarErrorCarga,
     iniciar,
     pausar,
     reanudar,
@@ -233,7 +236,7 @@ export default function HomeScreen() {
         // Botones flotantes
         fabContainer: {
           position: 'absolute',
-          bottom: insets.bottom + BottomTabInset + Spacing.three,
+          bottom: Spacing.three,
           right: Spacing.four,
           gap: Spacing.two,
         },
@@ -271,7 +274,7 @@ export default function HomeScreen() {
           padding: Spacing.three,
         },
         modalCard: {
-          padding: Spacing.five,
+          padding: Spacing.four,
           borderRadius: 16,
           width: '90%',
           maxWidth: 420,
@@ -327,17 +330,17 @@ export default function HomeScreen() {
         modalBotones: {
           flexDirection: 'row',
           justifyContent: 'center',
-          gap: Spacing.two,
+          gap: Spacing.three,
           width: '100%',
           marginTop: Spacing.two,
         },
         modalBotonGuardar: {
           backgroundColor: theme.primary,
-          paddingVertical: Spacing.three,
-          paddingHorizontal: Spacing.six,
-          borderRadius: Spacing.two,
+          paddingHorizontal: Spacing.three,
+          borderRadius: 10,
+          flex: 1,
           minWidth: TouchMinWidth,
-          minHeight: TouchMinHeight,
+          minHeight: 52,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -346,11 +349,11 @@ export default function HomeScreen() {
         },
         modalBotonCerrar: {
           backgroundColor: 'transparent',
-          paddingVertical: Spacing.three,
-          paddingHorizontal: Spacing.six,
-          borderRadius: Spacing.two,
+          paddingHorizontal: Spacing.three,
+          borderRadius: 10,
+          flex: 1,
           minWidth: TouchMinWidth,
-          minHeight: TouchMinHeight,
+          minHeight: 52,
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 1,
@@ -372,7 +375,7 @@ export default function HomeScreen() {
           marginTop: Spacing.two,
         },
       }),
-    [theme, insets.bottom]
+    [theme]
   );
 
   return (
@@ -406,31 +409,41 @@ export default function HomeScreen() {
         )}
         <TimerNotification state={state} />
 
-        {/* Tarjeta principal: fase, tiempo y pomodoros */}
-        <ThemedView type="surface" style={styles.card}>
-          <TimerDisplay
-            state={state}
-            tiempoMostrar={tiempoMostrar}
-            cicloPomodoros={cicloPomodoros}
+        {/* Tarjeta principal: fase, tiempo y pomodoros.
+             Si hay error de carga del almacenamiento se muestra el banner de
+             error en su lugar y NO se renderiza el temporizador ni los controles (RF-04). */}
+        {errorCarga ? (
+          <ErrorCargaBanner
+            mensaje={errorCarga}
+            onReintentar={reintentarCarga}
+            onCerrar={limpiarErrorCarga}
           />
-          <TimerControls
-            estaCorriendo={estaCorriendo}
-            estaPausado={estaPausado}
-            onIniciarPausar={
-              estaCorriendo || estaPausado
-                ? estaCorriendo
-                  ? pausar
-                  : reanudar
-                : iniciar
-            }
-            onReiniciar={() => setMostrarConfirmacionReinicio(true)}
-          />
-          <ReinicioCompletoPomodoro
-            onReiniciarCompleto={() =>
-              setMostrarConfirmacionReinicioCompleto(true)
-            }
-          />
-        </ThemedView>
+        ) : (
+          <ThemedView type="surface" style={styles.card}>
+            <TimerDisplay
+              state={state}
+              tiempoMostrar={tiempoMostrar}
+              cicloPomodoros={cicloPomodoros}
+            />
+            <TimerControls
+              estaCorriendo={estaCorriendo}
+              estaPausado={estaPausado}
+              onIniciarPausar={
+                estaCorriendo || estaPausado
+                  ? estaCorriendo
+                    ? pausar
+                    : reanudar
+                  : iniciar
+              }
+              onReiniciar={() => setMostrarConfirmacionReinicio(true)}
+            />
+            <ReinicioCompletoPomodoro
+              onReiniciarCompleto={() =>
+                setMostrarConfirmacionReinicioCompleto(true)
+              }
+            />
+          </ThemedView>
+        )}
 
         {/* Botones flotantes: Ajustes y Reinicio a fábrica (esquina inferior derecha) */}
         <View style={styles.fabContainer}>

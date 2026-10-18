@@ -87,6 +87,19 @@ describe('useTimer – persistencia', () => {
     expect(hookResult.errorPersistencia).toContain(motivo);
     expect(guardarEstado).toHaveBeenCalled();
   });
+
+  it('RF-06: guardarConfiguracion rechaza -> guardarAjustes lanza y no cambia configuracion', async () => {
+    const motivo = 'No hay espacio en el dispositivo';
+    (guardarConfiguracion as jest.Mock).mockRejectedValueOnce(new Error(motivo));
+
+    renderHook();
+    await act(async () => {});
+
+    const configAntes = hookResult.configuracion;
+    await expect(hookResult.guardarAjustes({ estudio: 30 })).rejects.toThrow(motivo);
+    expect(hookResult.configuracion).toEqual(configAntes);
+    expect(guardarConfiguracion).toHaveBeenCalled();
+  });
 });
 
 describe('useTimer – reinicio completo de pomodoro', () => {
@@ -250,6 +263,63 @@ describe('useTimer – carga al montar y recálculo por timestamps', () => {
     expect(hookResult.state.status).toBe('pausado');
     expect(hookResult.state.tiempoRestante).toBe(700);
     expect(hookResult.state.startedAt).toBeNull();
+  });
+});
+
+describe('useTimer – carga de almacenamiento y error (Spec 006)', () => {
+  it('RF-04: al montar con cargarEstado rechazando, errorCarga se setea y no se inicia el temporizador', async () => {
+    const motivo = 'Error al leer el estado guardado: JSON corrupto';
+    (cargarEstado as jest.Mock).mockRejectedValueOnce(new Error(motivo));
+    (cargarConfiguracion as jest.Mock).mockResolvedValue(null);
+
+    renderHook();
+    await act(async () => {});
+
+    expect(hookResult.errorCarga).toContain(motivo);
+    expect(hookResult.state.status).toBe('detenido');
+    expect(hookResult.state.fase).toBe('estudio');
+    expect(guardarEstado).not.toHaveBeenCalled();
+  });
+
+  it('RF-04: al montar con cargarConfiguracion rechazando, errorCarga se setea', async () => {
+    const motivo = 'Error al leer la configuración';
+    (cargarConfiguracion as jest.Mock).mockRejectedValueOnce(new Error(motivo));
+    (cargarEstado as jest.Mock).mockResolvedValue(null);
+
+    renderHook();
+    await act(async () => {});
+
+    expect(hookResult.errorCarga).toContain(motivo);
+    expect(hookResult.state.status).toBe('detenido');
+  });
+
+  it('RF-05: reintentarCarga limpia el error y vuelve a leer el almacenamiento', async () => {
+    const guardado = {
+      ...initialState(),
+      fase: 'descansoCorto',
+      status: 'pausado',
+      tiempoRestante: 200,
+      duracionFase: 300,
+      pomodoros: 2,
+      startedAt: null,
+      faseAnterior: 'estudio',
+    };
+    (cargarEstado as jest.Mock).mockRejectedValueOnce(new Error('fallo de lectura'));
+    (cargarEstado as jest.Mock).mockResolvedValueOnce(guardado);
+
+    renderHook();
+    await act(async () => {});
+
+    expect(hookResult.errorCarga).not.toBeNull();
+    expect(hookResult.state.status).toBe('detenido');
+
+    await act(async () => {
+      await hookResult.reintentarCarga();
+    });
+
+    expect(hookResult.errorCarga).toBeNull();
+    expect(hookResult.state).toEqual(guardado);
+    expect(cargarEstado).toHaveBeenCalledTimes(2);
   });
 });
 

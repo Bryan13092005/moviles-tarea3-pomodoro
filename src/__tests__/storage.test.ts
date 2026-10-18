@@ -123,6 +123,16 @@ describe('storage', () => {
     // Debe rechazar la promesa con el motivo (no lanzar de forma síncrona ni bloquear)
     await expect(guardarEstado(MOCK_STATE)).rejects.toThrow(motivo);
   });
+
+  it('RF-04: cargarEstado con JSON corrupto rechaza con el motivo de la falla', async () => {
+    (AsyncStorage as any).__store['@pomodoro/state'] = '{no es json valido';
+    await expect(cargarEstado()).rejects.toThrow('Error al leer el estado guardado');
+  });
+
+  it('RF-04: cargarEstado con JSON que no es un objeto rechaza con el motivo', async () => {
+    (AsyncStorage as any).__store['@pomodoro/state'] = '12345';
+    await expect(cargarEstado()).rejects.toThrow('Error al leer el estado guardado');
+  });
 });
 
 describe('configuración (RF-03)', () => {

@@ -64,6 +64,12 @@ export interface UseTimerReturn {
   mostrarBannerPermiso: boolean;
   mensajePermiso: string;
   errorPersistencia: string | null;
+  /** Motivo del último fallo de lectura del almacenamiento al iniciar (RF-04). null = sin fallo. */
+  errorCarga: string | null;
+  /** Vuelve a intentar la lectura del almacenamiento (RF-05). */
+  reintentarCarga: () => Promise<void>;
+  /** Limpia el error de carga y oculta el banner de error (RF-04 / RF-05). */
+  limpiarErrorCarga: () => void;
   iniciar: () => Promise<void>;
   pausar: () => Promise<void>;
   reanudar: () => Promise<void>;
@@ -124,6 +130,8 @@ export function useTimer(): UseTimerReturn {
   const [mostrarBannerPermiso, setMostrarBannerPermiso] = useState(false);
   /** Motivo del último fallo de persistencia (RF-05). null = sin fallo. */
   const [errorPersistencia, setErrorPersistencia] = useState<string | null>(null);
+  /** Motivo del último fallo de lectura del almacenamiento al iniciar (RF-04). null = sin fallo. */
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   /** Estado separado para forzar re-render cada segundo mientras corre. */
   const [tiempoMostrar, setTiempoMostrar] = useState(state.tiempoRestante);
   /** Configuración de ajustes del usuario (duraciones y ciclo de pomodoros). */
@@ -153,10 +161,15 @@ export function useTimer(): UseTimerReturn {
     [],
   );
 
-  // --- Carga al montar y recalcula si estaba corriendo (RF-13, Decisión 3) ---
-  useEffect(() => {
-    let montado = true;
-    (async () => {
+  /**
+   * Carga configuración y estado del almacenamiento. Se ejecuta al montar
+   * (reintento automático al relanzar la app, RF-05). No borra un error previo
+   * al inicio: ese rol le corresponde a `reintentarCarga` (botón "Reintentar").
+   * Si la lectura falla, expone el motivo en `errorCarga` y no inicia el
+   * temporizador ni persiste una sesión parcial (RF-04).
+   */
+  const cargarSesion = useCallback(async () => {
+    try {
       // La configuración se carga primero para que toda la carga use una sola copia de datos.
       const guardadoConfig = await cargarConfiguracion();
       const configCargada: Configuracion = { ...CONFIG_FABRICA, ...guardadoConfig };
@@ -165,12 +178,9 @@ export function useTimer(): UseTimerReturn {
         descansoCorto: configCargada.descansoCorto,
         descansoLargo: configCargada.descansoLargo,
       };
-      if (!montado) return;
       setConfiguracion(configCargada);
 
       const guardado = await cargarEstado();
-      if (!montado) return;
-
       if (guardado) {
         let siguiente: TimerState | TickResult = guardado;
         if (guardado.status === 'corriendo') {
@@ -198,15 +208,41 @@ export function useTimer(): UseTimerReturn {
       }
 
       setPermisoConcedido(await solicitarPermisoAlarma(alarmService));
-    })();
+    } catch (error: unknown) {
+      // RF-04: error visible de lectura, la app no inicia el temporizador.
+      setErrorCarga(error instanceof Error ? error.message : String(error));
+    }
+  }, []);
+
+  /**
+   * Vuelve a leer el almacenamiento (RF-05). Limpia el error previo antes de
+   * reintentar para que un intento exitoso oculte el banner de error.
+   */
+  const reintentarCarga = useCallback(async () => {
+    setErrorCarga(null);
+    await cargarSesion();
+  }, [cargarSesion]);
+
+  /** Limpia el error de carga y oculta el banner de error (RF-04 / RF-05). */
+  const limpiarErrorCarga = useCallback(() => {
+    setErrorCarga(null);
+  }, []);
+
+  // --- Carga al montar y recalcula si estaba corriendo (RF-13, Decisión 3) ---
+  useEffect(() => {
+    // RF-05: al montar (relanzar la app) se reintenta la lectura automáticamente.
+    // `cargarSesion` solo asigna estado tras `await` (no hay `setState`
+    // síncrono durante la ejecución del efecto), por lo que no hay render en
+    // cascada; se suprime la advertencia estática de la regla.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void cargarSesion();
     return () => {
-      montado = false;
       if (alarmTimeoutRef.current !== null) {
         clearTimeout(alarmTimeoutRef.current);
         alarmTimeoutRef.current = null;
       }
     };
-  }, []);
+  }, [cargarSesion]);
 
   // --- Programar el aviso de fin de fase en el SO para que suene en segundo plano ---
   useEffect(() => {
@@ -463,6 +499,7 @@ export function useTimer(): UseTimerReturn {
     mostrarBannerPermiso,
     mensajePermiso: MENSAJE_PERMISO_ALARMA,
     errorPersistencia,
+    errorCarga,
     configuracion,
     cicloPomodoros,
     guardarAjustes,
@@ -475,5 +512,7 @@ export function useTimer(): UseTimerReturn {
     detenerAlarma,
     solicitarPermiso,
     cerrarBannerPermiso,
+    reintentarCarga,
+    limpiarErrorCarga,
   };
 }
