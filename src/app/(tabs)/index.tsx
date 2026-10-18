@@ -8,7 +8,7 @@ import {
   Modal,
 } from 'react-native';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmDialog } from '@/components/timer/AlarmDialog';
 import { ConfirmResetDialog } from '@/components/timer/ConfirmResetDialog';
@@ -34,6 +34,7 @@ import {
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     state,
     tiempoMostrar,
@@ -232,7 +233,7 @@ export default function HomeScreen() {
         // Botones flotantes
         fabContainer: {
           position: 'absolute',
-          bottom: BottomTabInset + Spacing.four,
+          bottom: insets.bottom + BottomTabInset + Spacing.three,
           right: Spacing.four,
           gap: Spacing.two,
         },
@@ -371,7 +372,7 @@ export default function HomeScreen() {
           marginTop: Spacing.two,
         },
       }),
-    [theme]
+    [theme, insets.bottom]
   );
 
   return (

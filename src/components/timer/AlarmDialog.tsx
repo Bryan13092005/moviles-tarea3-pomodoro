@@ -53,9 +53,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(14, 19, 38, 0.6)',
   },
   card: {
-    padding: Spacing.five,
+    padding: Spacing.four,
     borderRadius: 16,
-    minWidth: 280,
+    width: '90%',
+    maxWidth: 420,
     alignItems: 'center',
   },
   titulo: {
