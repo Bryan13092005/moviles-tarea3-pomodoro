@@ -5,7 +5,7 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import {Tabs} from 'expo-router';
+import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
 
@@ -13,7 +13,7 @@ import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Colors, Spacing, MaxContentWidth } from '@/constants/theme';
 
 export default function AppTabs() {
   return (
@@ -37,9 +37,11 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
   return (
     <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
+        type={isFocused ? 'active' : 'surface'}
         style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
+        <ThemedText
+          type="small"
+          themeColor={isFocused ? 'headerText' : 'textSecondary'}>
           {children}
         </ThemedText>
       </ThemedView>
@@ -53,18 +55,23 @@ export function CustomTabList(props: TabListProps) {
 
   return (
     <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Expo Starter
+      <ThemedView
+        type="surface"
+        style={[styles.innerContainer, { borderColor: colors.border }]}
+      >
+        <ThemedText type="smallBold" style={styles.brandText} themeColor="surfaceText">
+          Pomodoro
         </ThemedText>
 
         {props.children}
 
         <ExternalLink href="https://docs.expo.dev" asChild>
           <Pressable style={styles.externalPressable}>
-            <ThemedText type="link">Docs</ThemedText>
+            <ThemedText type="link" themeColor="headerText">
+              Docs
+            </ThemedText>
             <SymbolView
-              tintColor={colors.text}
+              tintColor={colors.headerText}
               name={{ ios: 'arrow.up.right.square', web: 'link' }}
               size={12}
             />
@@ -78,8 +85,9 @@ export function CustomTabList(props: TabListProps) {
 const styles = StyleSheet.create({
   tabListContainer: {
     position: 'absolute',
+    top: Spacing.three,
     width: '100%',
-    padding: Spacing.three,
+    paddingHorizontal: Spacing.four,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
@@ -87,12 +95,14 @@ const styles = StyleSheet.create({
   innerContainer: {
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     flexGrow: 1,
     gap: Spacing.two,
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    borderWidth: 1,
   },
   brandText: {
     marginRight: 'auto',
@@ -103,7 +113,7 @@ const styles = StyleSheet.create({
   tabButtonView: {
     paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
+    borderRadius: 10,
   },
   externalPressable: {
     flexDirection: 'row',

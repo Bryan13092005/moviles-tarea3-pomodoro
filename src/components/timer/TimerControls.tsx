@@ -7,7 +7,8 @@ import { StyleSheet, Pressable } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { Spacing, TouchMinHeight, TouchMinWidth } from '@/constants/theme';
 
 export type TimerControlsProps = {
   /** Si el temporizador está corriendo. */
@@ -26,6 +27,7 @@ export function TimerControls({
   onIniciarPausar,
   onReiniciar,
 }: TimerControlsProps) {
+  const theme = useTheme();
   const esPausado = estaPausado;
   const labelPrincipal = estaCorriendo
     ? 'Pausar'
@@ -34,24 +36,33 @@ export function TimerControls({
       : 'Iniciar';
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView type="surface" style={styles.container}>
       <Pressable
-        style={styles.botonPrincipal}
+        style={[
+          styles.botonPrincipal,
+          { backgroundColor: theme.primary },
+        ]}
         onPress={onIniciarPausar}
         accessibilityLabel={labelPrincipal}
         accessibilityRole="button"
       >
-        <ThemedText type="smallBold" style={styles.textoBoton}>
+        <ThemedText type="smallBold" style={styles.textoBoton} themeColor="primaryText">
           {labelPrincipal}
         </ThemedText>
       </Pressable>
       <Pressable
-        style={styles.botonSecundario}
+        style={[
+          styles.botonSecundario,
+          {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+          },
+        ]}
         onPress={onReiniciar}
         accessibilityLabel="Reiniciar temporizador"
         accessibilityRole="button"
       >
-        <ThemedText type="smallBold" style={styles.textoBoton}>
+        <ThemedText type="smallBold" style={styles.textoBoton} themeColor="surfaceText">
           Reiniciar
         </ThemedText>
       </Pressable>
@@ -65,23 +76,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.three,
     paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.five,
+    paddingBottom: Spacing.four,
   },
   botonPrincipal: {
-    backgroundColor: '#3C9FFE',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.six,
-    borderRadius: Spacing.four,
-    minWidth: 120,
+    paddingHorizontal: Spacing.four,
+    borderRadius: 12,
+    minWidth: TouchMinWidth,
+    minHeight: 56,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   botonSecundario: {
-    backgroundColor: '#E0E1E6',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.six,
-    borderRadius: Spacing.four,
-    minWidth: 120,
+    paddingHorizontal: Spacing.four,
+    borderRadius: 10,
+    minWidth: TouchMinWidth,
+    minHeight: 56,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   textoBoton: {
     textAlign: 'center',

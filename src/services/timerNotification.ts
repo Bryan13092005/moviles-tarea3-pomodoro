@@ -12,7 +12,9 @@ import { type FasePomodoro } from '../constants/pomodoro';
 import { formatMMSS } from '../domain/timer';
 
 const ID_NOTIFICACION = 'pomodoro-progreso';
-const ID_CANAL = 'pomodoro-progreso';
+// Los canales de Android son inmutables: el id lleva versión para que el cambio de importancia aplique.
+const ID_CANAL = 'pomodoro-progreso-v3';
+const CANALES_OBSOLETOS = ['pomodoro-progreso', 'pomodoro-progreso-v2'];
 
 const NOMBRE_FASE: Record<FasePomodoro, string> = {
   estudio: 'Estudio',
@@ -25,10 +27,14 @@ let canalCreado: Promise<string> | null = null;
 
 function asegurarCanal(): Promise<string> {
   if (!canalCreado) {
+    // Elimina los canales viejos (LOW/silenciados) que Android conserva con su configuración.
+    for (const id of CANALES_OBSOLETOS) {
+      void notifee.deleteChannel(id).catch(() => undefined);
+    }
     canalCreado = notifee.createChannel({
       id: ID_CANAL,
       name: 'Temporizador en curso',
-      importance: AndroidImportance.LOW, // sin sonido ni vibración
+      importance: AndroidImportance.DEFAULT, // "Predeterminada" (LOW aparecía como silenciada)
       visibility: AndroidVisibility.PUBLIC,
     });
   }
@@ -60,6 +66,8 @@ export async function mostrarProgreso(
         showChronometer: corriendo,
         chronometerDirection: 'down',
         timestamp: corriendo ? finMs : undefined,
+        // El sistema la retira al llegar a 0 para que el cronómetro no corra en negativo.
+        timeoutAfter: corriendo ? Math.max(1, finMs - Date.now()) : undefined,
         pressAction: { id: 'default' },
       },
     });

@@ -8,8 +8,8 @@
 import { Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { Spacing, TouchMinHeight, TouchMinWidth } from '@/constants/theme';
 
 export type ReinicioCompletoPomodoroProps = {
   /** Acción que abre la confirmación de reinicio completo de pomodoro. */
@@ -19,14 +19,19 @@ export type ReinicioCompletoPomodoroProps = {
 export function ReinicioCompletoPomodoro({
   onReiniciarCompleto,
 }: ReinicioCompletoPomodoroProps) {
+  const theme = useTheme();
+
   return (
     <Pressable
-      style={styles.boton}
+      style={[
+        styles.boton,
+        { backgroundColor: theme.surface, borderColor: theme.border },
+      ]}
       onPress={onReiniciarCompleto}
       accessibilityLabel="Reinicio completo de pomodoro"
       accessibilityRole="button"
     >
-      <ThemedText type="smallBold" style={styles.textoBoton}>
+      <ThemedText type="smallBold" style={styles.textoBoton} themeColor="surfaceText">
         Reinicio Completo de Pomodoro
       </ThemedText>
     </Pressable>
@@ -35,16 +40,17 @@ export function ReinicioCompletoPomodoro({
 
 const styles = StyleSheet.create({
   boton: {
-    backgroundColor: '#3C9FFE',
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.six,
-    borderRadius: Spacing.four,
-    minWidth: 220,
+    borderRadius: 12,
+    minWidth: TouchMinWidth,
+    minHeight: TouchMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    width: '100%',
   },
   textoBoton: {
     textAlign: 'center',
-    color: '#FFFFFF',
   },
 });

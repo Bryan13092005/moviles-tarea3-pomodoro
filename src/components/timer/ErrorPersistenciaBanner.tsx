@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 
 export type ErrorPersistenciaBannerProps = {
@@ -20,14 +21,25 @@ export function ErrorPersistenciaBanner({
   mensaje,
   onCerrar,
 }: ErrorPersistenciaBannerProps) {
+  const theme = useTheme();
+
   return (
-    <ThemedView type="backgroundElement" style={styles.container}>
-      <ThemedText type="small" style={styles.mensaje}>
+    <ThemedView
+      type="surface"
+      style={[styles.container, { borderColor: theme.border }]}
+    >
+      <ThemedText type="small" style={styles.mensaje} themeColor="surfaceText">
         Error al guardar: {mensaje}
       </ThemedText>
       <View style={styles.botonCerrarContenedor}>
-        <Pressable style={styles.botonCerrar} onPress={onCerrar}>
-          <ThemedText type="smallBold" style={styles.textoBotonCerrar}>
+        <Pressable
+          style={[
+            styles.botonCerrar,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+          onPress={onCerrar}
+        >
+          <ThemedText type="smallBold" style={styles.textoBotonCerrar} themeColor="surfaceText">
             Cerrar
           </ThemedText>
         </Pressable>
@@ -39,10 +51,11 @@ export function ErrorPersistenciaBanner({
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.three,
-    borderRadius: Spacing.four,
+    borderRadius: 12,
     alignSelf: 'stretch',
     marginHorizontal: Spacing.four,
     marginBottom: Spacing.three,
+    borderWidth: 1,
   },
   mensaje: {
     textAlign: 'center',
@@ -55,8 +68,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
     borderRadius: Spacing.two,
-    backgroundColor: '#E0E1E6',
     alignItems: 'center',
+    borderWidth: 1,
   },
   textoBotonCerrar: {
     textAlign: 'center',

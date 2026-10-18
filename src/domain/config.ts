@@ -14,10 +14,10 @@ export interface Configuracion {
 }
 
 export const CONFIG_FABRICA: Configuracion = {
-  estudio: 1 * 60,
-  descansoCorto: 1 * 60,
-  descansoLargo: 2 * 60,
-  cicloPomodoros: 3,
+  estudio: 25 * 60,
+  descansoCorto: 5 * 60,
+  descansoLargo: 15 * 60,
+  cicloPomodoros: 4,
 };
 
 export const RANGOS: Record<CampoAjuste, { min: number; max: number; unidad: 'min' | 'unidades' }> = {

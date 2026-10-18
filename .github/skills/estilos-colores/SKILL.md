@@ -43,3 +43,4 @@ Fuente: Guía de Estilo Visual y Marca de la Academia Cotopaxi[cite: 1].
 ## Reglas
 - La fase o estado actual del temporizador (Estudio, Descanso Corto, Descanso Largo) se comunica siempre con texto e indicadores visuales claros además del color.
 - Usa únicamente colores y proporciones de esta lista. Si falta alguna dimensión o color para un estado específico, solicita aclaración antes de implementarlo.
+- Prohibido CAMBIAR ALGUNA FUNCIONALIDAD, HOOKS DE REACT o la lógica de la aplicacion.

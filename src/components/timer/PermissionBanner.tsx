@@ -8,7 +8,8 @@ import { StyleSheet, Pressable, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { Spacing, TouchMinHeight } from '@/constants/theme';
 
 export type PermissionBannerProps = {
   mensaje: string;
@@ -21,19 +22,36 @@ export function PermissionBanner({
   onHabilitar,
   onCerrar,
 }: PermissionBannerProps) {
+  const theme = useTheme();
+
   return (
-    <ThemedView type="backgroundElement" style={styles.container}>
-      <ThemedText type="small" style={styles.mensaje}>
+    <ThemedView
+      type="surface"
+      style={[styles.container, { borderColor: theme.border }]}
+    >
+      <ThemedText type="small" style={styles.mensaje} themeColor="surfaceText">
         {mensaje}
       </ThemedText>
       <View style={styles.botones}>
-        <Pressable style={styles.boton} onPress={onHabilitar}>
-          <ThemedText type="smallBold" style={styles.textoBoton}>
+        <Pressable
+          style={[
+            styles.boton,
+            { backgroundColor: theme.primary },
+          ]}
+          onPress={onHabilitar}
+        >
+          <ThemedText type="smallBold" style={styles.textoBoton} themeColor="primaryText">
             Habilitar notificaciones
           </ThemedText>
         </Pressable>
-        <Pressable style={styles.botonCerrar} onPress={onCerrar}>
-          <ThemedText type="smallBold" style={styles.textoBoton}>
+        <Pressable
+          style={[
+            styles.botonCerrar,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+          onPress={onCerrar}
+        >
+          <ThemedText type="smallBold" style={styles.textoBoton} themeColor="surfaceText">
             Cerrar
           </ThemedText>
         </Pressable>
@@ -45,10 +63,11 @@ export function PermissionBanner({
 const styles = StyleSheet.create({
   container: {
     padding: Spacing.three,
-    borderRadius: Spacing.four,
+    borderRadius: 12,
     alignSelf: 'stretch',
     marginHorizontal: Spacing.four,
     marginBottom: Spacing.three,
+    borderWidth: 1,
   },
   mensaje: {
     textAlign: 'center',
@@ -62,19 +81,22 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
     borderRadius: Spacing.two,
-    backgroundColor: '#3C9FFE',
     flex: 1,
     marginRight: Spacing.one,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: TouchMinHeight,
   },
   botonCerrar: {
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,
     borderRadius: Spacing.two,
-    backgroundColor: '#E0E1E6',
     flex: 1,
     marginLeft: Spacing.one,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    minHeight: TouchMinHeight,
   },
   textoBoton: {
     textAlign: 'center',

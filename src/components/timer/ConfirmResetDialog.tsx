@@ -8,7 +8,8 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { Spacing, TouchMinHeight, TouchMinWidth } from '@/constants/theme';
 
 export type ConfirmResetDialogProps = {
   visible: boolean;
@@ -27,25 +28,42 @@ export function ConfirmResetDialog({
   titulo,
   descripcion,
 }: ConfirmResetDialogProps) {
+  const theme = useTheme();
+
   return (
     <Modal transparent visible={visible} onRequestClose={onCancelar}>
       <ThemedView style={styles.overlay}>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle" style={styles.titulo}>
+        <ThemedView type="surface" style={styles.card}>
+          <ThemedText type="subtitle" style={styles.titulo} themeColor="surfaceText">
             {titulo ?? '¿Reiniciar el temporizador?'}
           </ThemedText>
-          <ThemedText type="default" style={styles.descripcion}>
+          <ThemedText type="default" style={styles.descripcion} themeColor="textSecondary">
             {descripcion ??
               'Volverá a la duración completa de la fase actual y quedará detenido.'}
           </ThemedText>
           <View style={styles.botones}>
-            <Pressable style={styles.boton} onPress={onCancelar}>
-              <ThemedText type="smallBold" style={styles.textoBoton}>
+            <Pressable
+              style={[
+                styles.boton,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                },
+              ]}
+              onPress={onCancelar}
+            >
+              <ThemedText type="smallBold" style={styles.textoBoton} themeColor="surfaceText">
                 Cancelar
               </ThemedText>
             </Pressable>
-            <Pressable style={styles.botonAceptar} onPress={onAceptar}>
-              <ThemedText type="smallBold" style={styles.textoBoton}>
+            <Pressable
+              style={[
+                styles.botonAceptar,
+                { backgroundColor: theme.primary },
+              ]}
+              onPress={onAceptar}
+            >
+              <ThemedText type="smallBold" style={styles.textoBoton} themeColor="primaryText">
                 Aceptar
               </ThemedText>
             </Pressable>
@@ -61,11 +79,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(14, 19, 38, 0.6)',
   },
   card: {
     padding: Spacing.five,
-    borderRadius: Spacing.four,
+    borderRadius: 16,
     minWidth: 280,
     alignItems: 'center',
   },
@@ -86,12 +104,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.six,
     borderRadius: Spacing.two,
+    minWidth: TouchMinWidth,
+    minHeight: TouchMinHeight,
     alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
     marginHorizontal: Spacing.one,
+    borderWidth: 1,
   },
   botonAceptar: {
-    backgroundColor: '#3C9FFE',
+    marginHorizontal: Spacing.one,
   },
   textoBoton: {
     textAlign: 'center',

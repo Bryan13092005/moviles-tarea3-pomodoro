@@ -20,13 +20,10 @@ Máximo 20-30 min por tarea, ordenadas por dependencia. Las de lógica se verifi
 - [ ] **T6. Pruebas: escritura fallida de estado y ajustes (RF-06, RF-09).** Añadir pruebas en `src/__tests__/useTimer.test.ts` y `storage.test.ts`: `guardarEstado` rechaza → `errorPersistencia` se setea y al recargar se usa último estado válido; `guardarConfiguracion` rechaza → `guardarAjustes` lanza y no cambia `configuracion`.
   - Hecho cuando: las pruebas nuevas pasan en `npx jest`.
 
-- [ ] **T7. UI: banner de error de carga con botón Reintentar (RF-04, RF-05, RF-10).** Crear `src/components/timer/ErrorCargaBanner.tsx` (mensaje de error + botón Reintentar + Cerrar) y cablear en `src/app/(tabs)/index.tsx`: cuando `errorCarga` no null, mostrar el banner en lugar del temporizador; al tocar Reintentar se vuelve a intentar la carga.
-  - Hecho cuando: compila (tsc sin errores), renderiza sin errores, y se verifica manualmente en Expo Go con la lista de verificación de rn-conventions (banner se muestra al fallar la carga, reintentar vuelve a intentar, cerrar oculta el banner). Confirmar que no hay indicador de modo offline en ninguna pantalla.
-
-- [ ] **T8. Verificación de RF ya implementados: inspección y pruebas de RF-01, RF-02, RF-03, RF-08, RF-10 y RNF.** Revisar que no hay pantalla de login, no hay llamadas de red, no hay anuncios, no hay indicador offline; asegurar prueba de instalación nueva → fábrica en `storage.test.ts`; actualizar matriz de trazabilidad del plan.
+- [ ] **T7. Verificación de RF ya implementados: inspección y pruebas de RF-01, RF-02, RF-03, RF-08, RF-10 y RNF.** Revisar que no hay pantalla de login, no hay llamadas de red, no hay anuncios, no hay indicador offline; asegurar prueba de instalación nueva → fábrica en `storage.test.ts`; actualizar matriz de trazabilidad del plan.
   - Hecho cuando: `npx jest` pasa; matriz de trazabilidad del plan cubre los 10 RF y 3 RNF; `npx tsc --noEmit` y `npx expo lint` sin errores nuevos.
 
-- [ ] **T9. Verificación final: todos los RF, Jest, TypeScript y lint (RF-01…RF-10, RNF-01…RNF-03).** Ejecutar `npx jest`, `npx tsc --noEmit`, `npx expo lint`; revisar que cada RF tiene al menos una prueba o implementación.
+- [ ] **T8. Verificación final: todos los RF, Jest, TypeScript y lint (RF-01…RF-10, RNF-01…RNF-03).** Ejecutar `npx jest`, `npx tsc --noEmit`, `npx expo lint`; revisar que cada RF tiene al menos una prueba o implementación.
   - Hecho cuando: todas las suites de prueba verdes, `tsc` sin errores, `lint` sin errores nuevos.
 
-Total: 9 tareas.
+Total: 8 tareas.

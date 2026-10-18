@@ -10,11 +10,22 @@ import { ExpoAlarmService } from '../services/alarm';
 
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(async () => null),
   requestPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
   getPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
   scheduleNotificationAsync: jest.fn(async () => 'notification-id'),
+  cancelScheduledNotificationAsync: jest.fn(async () => undefined),
   cancelAllScheduledNotificationsAsync: jest.fn(async () => undefined),
+  dismissAllNotificationsAsync: jest.fn(async () => undefined),
+  AndroidImportance: { MAX: 5 },
+  AndroidAudioUsage: { ALARM: 4 },
+  AndroidAudioContentType: { SONIFICATION: 4 },
+  AndroidNotificationVisibility: { PUBLIC: 1 },
+  AndroidNotificationPriority: { HIGH: 'high' },
+  SchedulableTriggerInputTypes: { DATE: 'date' },
 }));
+
+beforeEach(() => jest.clearAllMocks());
 
 describe('ExpoAlarmService', () => {
   it('registra el manejador para presentar notificaciones en primer plano', () => {
@@ -30,7 +41,6 @@ describe('ExpoAlarmService', () => {
         content: expect.objectContaining({
           body: '¡Fase Descanso Largo finalizada!',
           sound: true,
-          vibrate: [0, 250, 250, 250],
           priority: 'high',
         }),
       }),
@@ -42,10 +52,17 @@ describe('ExpoAlarmService', () => {
     await service.play();
     expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.objectContaining({
-          body: 'La fase ha finalizado.',
-        }),
+        content: expect.objectContaining({ body: 'La fase ha finalizado.' }),
       }),
     );
+  });
+
+  it('programa una serie repetida de avisos y cancela toda la serie', async () => {
+    const service = new ExpoAlarmService();
+    await service.scheduleEnd('estudio', Date.now() + 60_000);
+    const llamadas = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls.length;
+    expect(llamadas).toBeGreaterThan(1);
+    await service.cancelScheduledEnd();
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledTimes(llamadas);
   });
 });

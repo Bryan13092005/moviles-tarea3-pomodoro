@@ -24,6 +24,8 @@ jest.mock('@/services/alarm', () => ({
   alarmService: {
     play: jest.fn(),
     stop: jest.fn(),
+    scheduleEnd: jest.fn(async () => undefined),
+    cancelScheduledEnd: jest.fn(async () => undefined),
     requestPermission: jest.fn(),
     hasPermission: jest.fn(),
   },

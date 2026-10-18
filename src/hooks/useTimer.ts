@@ -208,6 +208,16 @@ export function useTimer(): UseTimerReturn {
     };
   }, []);
 
+  // --- Programar el aviso de fin de fase en el SO para que suene en segundo plano ---
+  useEffect(() => {
+    if (state.status !== 'corriendo' || !state.startedAt) return undefined;
+    const finMs = (state.startedAt + state.tiempoRestante) * 1000;
+    void alarmService.scheduleEnd(state.fase, finMs)?.catch?.(() => undefined);
+    return () => {
+      void alarmService.cancelScheduledEnd()?.catch?.(() => undefined);
+    };
+  }, [state.status, state.startedAt, state.tiempoRestante, state.fase]);
+
   // --- Detectar fin de fase por timestamps (RF-03, RF-10, RF-12) ---
   // Depende también de `tiempoMostrar` para ejecutarse cada segundo mientras
   // el temporizador corre y detectar cuando el tiempo llega a 0. Sin esto,
@@ -266,6 +276,12 @@ export function useTimer(): UseTimerReturn {
     }, 1000);
     return () => clearInterval(id);
   }, [state]);
+
+  // Si no corre, la pantalla siempre refleja el tiempo del estado (evita quedarse en 00:00
+  // tras terminar una fase mientras la app estaba en segundo plano).
+  useEffect(() => {
+    if (state.status !== 'corriendo') setTiempoMostrar(state.tiempoRestante);
+  }, [state.status, state.tiempoRestante, state.fase]);
 
   // --- Acciones (setters funcionales para evitar stale closures) ---
   const iniciar = useCallback(async () => {

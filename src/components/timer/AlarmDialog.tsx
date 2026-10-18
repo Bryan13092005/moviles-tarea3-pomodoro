@@ -7,7 +7,8 @@ import { Modal, Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { Spacing, TouchMinHeight, TouchMinWidth } from '@/constants/theme';
 
 export type AlarmDialogProps = {
   visible: boolean;
@@ -15,18 +16,26 @@ export type AlarmDialogProps = {
 };
 
 export function AlarmDialog({ visible, onAceptar }: AlarmDialogProps) {
+  const theme = useTheme();
+
   return (
     <Modal transparent visible={visible} onRequestClose={onAceptar}>
       <ThemedView style={styles.overlay}>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="subtitle" style={styles.titulo}>
+        <ThemedView type="surface" style={styles.card}>
+          <ThemedText type="subtitle" style={styles.titulo} themeColor="surfaceText">
             ¡Fase finalizada!
           </ThemedText>
-          <ThemedText type="default" style={styles.descripcion}>
+          <ThemedText type="default" style={styles.descripcion} themeColor="textSecondary">
             El tiempo de esta fase se ha completado.
           </ThemedText>
-          <Pressable style={styles.boton} onPress={onAceptar}>
-            <ThemedText type="smallBold" style={styles.textoBoton}>
+          <Pressable
+            style={[
+              styles.boton,
+              { backgroundColor: theme.primary },
+            ]}
+            onPress={onAceptar}
+          >
+            <ThemedText type="smallBold" style={styles.textoBoton} themeColor="primaryText">
               Aceptar
             </ThemedText>
           </Pressable>
@@ -41,11 +50,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(14, 19, 38, 0.6)',
   },
   card: {
     padding: Spacing.five,
-    borderRadius: Spacing.four,
+    borderRadius: 16,
     minWidth: 280,
     alignItems: 'center',
   },
@@ -61,8 +70,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     paddingHorizontal: Spacing.six,
     borderRadius: Spacing.two,
-    backgroundColor: '#3C9FFE',
+    minWidth: TouchMinWidth,
+    minHeight: TouchMinHeight,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   textoBoton: {
     textAlign: 'center',
