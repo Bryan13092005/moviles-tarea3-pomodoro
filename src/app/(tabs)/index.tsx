@@ -14,6 +14,7 @@ import { AlarmDialog } from '@/components/timer/AlarmDialog';
 import { ConfirmResetDialog } from '@/components/timer/ConfirmResetDialog';
 import { ErrorPersistenciaBanner } from '@/components/timer/ErrorPersistenciaBanner';
 import { PermissionBanner } from '@/components/timer/PermissionBanner';
+import { TimerNotification } from '@/components/timer/TimerNotification';
 import { ReinicioCompletoPomodoro } from '@/components/timer/ReinicioCompletoPomodoro';
 import { TimerControls } from '@/components/timer/TimerControls';
 import { TimerDisplay } from '@/components/timer/TimerDisplay';
@@ -215,6 +216,7 @@ export default function HomeScreen() {
             onCerrar={cerrarBannerPermiso}
           />
         )}
+        <TimerNotification state={state} />
         <TimerDisplay
           state={state}
           tiempoMostrar={tiempoMostrar}

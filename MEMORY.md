@@ -69,6 +69,9 @@ Spec 005 — AjusteTiempo (HU-005): IMPLEMENTADA COMPLETAMENTE.
 Todos los 11 RF (RF-01 a RF-11) y 3 RNF (RNF-01 a RNF-03) cubiertos.
 Todas las 9 tareas marcadas como hechas en tasks.md.
 
+Spec 006 — Offline (HU-006): APROBADA / PLANIFICADA.
+spec.md en `specs/006-offline/spec.md`. 10 RFs (RF-01 a RF-10) y 3 RNFs (RNF-01 a RNF-03) cubriendo los 3 escenarios de HU-006 (Cero Fricción Inicial, Funcionamiento Offline, Sin Interrupciones) y las 8 decisiones de specs/006-offline/decisiones.md. Estado: aprobada; plan.md y tasks.md completados (9 tareas, specs/006-offline/). No hay [NECESITA ACLARACIÓN] pendientes.
+
 ## Próximos pasos
 
-No hay próximos pasos de Spec 005 pendientes.
+Implementar Spec 006 (agente sdd-implement), empezando por T1 de specs/006-offline/tasks.md.
