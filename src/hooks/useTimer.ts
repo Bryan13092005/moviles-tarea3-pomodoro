@@ -71,6 +71,8 @@ export interface UseTimerReturn {
   reiniciarCompleto: () => Promise<void>;
   detenerAlarma: () => void;
   solicitarPermiso: () => Promise<void>;
+  /** Oculta el banner de permiso sin solicitarlo. */
+  cerrarBannerPermiso: () => void;
   /** Configuración actual de ajustes (duraciones y ciclo de pomodoros). */
   configuracion: Configuracion;
   /** Cantidad de pomodoros por ciclo configurada. */
@@ -155,6 +157,17 @@ export function useTimer(): UseTimerReturn {
   useEffect(() => {
     let montado = true;
     (async () => {
+      // La configuración se carga primero para que toda la carga use una sola copia de datos.
+      const guardadoConfig = await cargarConfiguracion();
+      const configCargada: Configuracion = { ...CONFIG_FABRICA, ...guardadoConfig };
+      const duracionesCargadas: Record<FasePomodoro, number> = {
+        estudio: configCargada.estudio,
+        descansoCorto: configCargada.descansoCorto,
+        descansoLargo: configCargada.descansoLargo,
+      };
+      if (!montado) return;
+      setConfiguracion(configCargada);
+
       const guardado = await cargarEstado();
       if (!montado) return;
 
@@ -172,22 +185,19 @@ export function useTimer(): UseTimerReturn {
             setTiempoMostrar,
             setAlarmaActiva,
             alarmTimeoutRef,
-            duraciones,
-            cicloPomodoros,
+            duracionesCargadas,
+            configCargada.cicloPomodoros,
           );
         } else {
           setState(siguiente as TimerState);
         }
+      } else {
+        const inicial = initialState(duracionesCargadas);
+        setState(inicial);
+        setTiempoMostrar(inicial.tiempoRestante);
       }
 
       setPermisoConcedido(await solicitarPermisoAlarma(alarmService));
-
-      // Carga la configuración de ajustes al montar (RF-03).
-      // Si no hay previa, se mantiene CONFIG_FABRICA (estado inicial).
-      const guardadoConfig = await cargarConfiguracion();
-      if (montado && guardadoConfig) {
-        setConfiguracion({ ...CONFIG_FABRICA, ...guardadoConfig });
-      }
     })();
     return () => {
       montado = false;
@@ -320,11 +330,11 @@ export function useTimer(): UseTimerReturn {
 
   const reiniciarCompleto = useCallback(async () => {
     // RF-08/RF-09: devuelve todo al estado inicial del pomodoro y persiste
-    const siguiente = reinicioCompleto();
+    const siguiente = reinicioCompleto(duraciones);
     setState(siguiente);
     setTiempoMostrar(siguiente.tiempoRestante);
     persist(siguiente);
-  }, []);
+  }, [duraciones]);
 
   const detenerAlarma = useCallback(() => {
     setAlarmaActiva(false);
@@ -341,6 +351,22 @@ export function useTimer(): UseTimerReturn {
     setMostrarBannerPermiso(!tienePermiso); // RNF-02, Constitución §1.3
   }, []);
 
+  const cerrarBannerPermiso = useCallback(() => {
+    setMostrarBannerPermiso(false);
+  }, []);
+
+  // Al volver de Ajustes del SO, se vuelve a consultar el permiso.
+  useEffect(() => {
+    const suscripcion = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState !== 'active') return;
+      void alarmService.hasPermission().then((concedido) => {
+        setPermisoConcedido(concedido);
+        if (concedido) setMostrarBannerPermiso(false);
+      });
+    });
+    return () => suscripcion.remove();
+  }, []);
+
   const guardarAjustes = useCallback(
     async (campos: Partial<Configuracion>): Promise<Configuracion> => {
       // RF-11: rechazar si el nuevo cicloPomodoros es menor que los pomodoros completados
@@ -349,7 +375,7 @@ export function useTimer(): UseTimerReturn {
         !puedeCambiarCicloPomodoros(state.pomodoros, campos.cicloPomodoros)
       ) {
         throw new Error(
-          `No se pueden establecer ${campos.cicloPomodoros} pomodoros por ciclo: ya llevas ${state.pomodoros} completados en este ciclo.`,
+          `No se pueden establecer ${campos.cicloPomodoros} pomodoros por ciclo: ya llevas ${state.pomodoros} completados, ese número corresponde a un pomodoro ya expirado.`,
         );
       }
 
@@ -380,11 +406,23 @@ export function useTimer(): UseTimerReturn {
       // RF-03: persistir en clave separada
       await guardarConfiguracion(configuracionNueva);
       setConfiguracion(configuracionNueva);
-      // RF-02, RF-10: no se toca state.tiempoRestante ni duracionFase de la fase actual;
+      // Una fase detenida que aún no empezó (instalación nueva o siguiente fase ya
+      // preparada) no está "en curso": toma los nuevos valores de inmediato.
+      if (state.status === 'detenido' && state.tiempoRestante === state.duracionFase) {
+        const nuevaDuracion = configuracionNueva[state.fase];
+        const siguiente: TimerState = {
+          ...state,
+          duracionFase: nuevaDuracion,
+          tiempoRestante: nuevaDuracion,
+        };
+        persist(siguiente);
+        setTiempoMostrar(nuevaDuracion);
+      }
+      // RF-02, RF-10: no se toca state.tiempoRestante ni duracionFase de una fase en curso;
       // los nuevos valores aplican a la siguiente iteración de cada fase.
       return configuracionNueva;
     },
-    [configuracion, state.pomodoros],
+    [configuracion, state, persist],
   );
 
   const restablecerAjustes = useCallback(async (confirmar: boolean): Promise<void> => {
@@ -420,5 +458,6 @@ export function useTimer(): UseTimerReturn {
     reiniciarCompleto,
     detenerAlarma,
     solicitarPermiso,
+    cerrarBannerPermiso,
   };
 }

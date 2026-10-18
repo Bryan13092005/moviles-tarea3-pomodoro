@@ -8,6 +8,7 @@
  */
 
 import * as Notifications from 'expo-notifications';
+import { Linking } from 'react-native';
 import { FasePomodoro } from '../constants/pomodoro';
 
 /** Nombre legible de cada fase para mostrar en la notificación (RF-01). */
@@ -55,6 +56,13 @@ export class ExpoAlarmService implements IAlarmService {
   }
 
   async requestPermission(): Promise<boolean> {
+    const actual = await Notifications.getPermissionsAsync();
+    if (actual.status === 'granted') return true;
+    // Si el SO ya no permite mostrar el diálogo, el único camino es Ajustes.
+    if (!actual.canAskAgain) {
+      await Linking.openSettings();
+      return false;
+    }
     const { status } = await Notifications.requestPermissionsAsync();
     return status === 'granted';
   }

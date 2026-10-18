@@ -42,12 +42,14 @@ export type TickResult = TimerState | FaseCompletadaEvent;
  * Estado de instalación nueva: fase Estudio, 25:00, detenido, listo para iniciar.
  * (RF-01, Decisión 6)
  */
-export function initialState(): TimerState {
+export function initialState(
+  duraciones: Record<FasePomodoro, number> = DURACION_POR_FASE,
+): TimerState {
   return {
     fase: 'estudio',
     status: 'detenido',
-    tiempoRestante: DURACION_POR_FASE.estudio,
-    duracionFase: DURACION_POR_FASE.estudio,
+    tiempoRestante: duraciones.estudio,
+    duracionFase: duraciones.estudio,
     pomodoros: 0,
     startedAt: null,
     faseAnterior: null,
@@ -226,8 +228,10 @@ export function completePhase(
  * No recibe parámetros; es la función base del botón "Reinicio Completo de
  * Pomodoro" (RF-08, RF-09).
  */
-export function reinicioCompleto(): TimerState {
-  return initialState();
+export function reinicioCompleto(
+  duraciones: Record<FasePomodoro, number> = DURACION_POR_FASE,
+): TimerState {
+  return initialState(duraciones);
 }
 
 /**

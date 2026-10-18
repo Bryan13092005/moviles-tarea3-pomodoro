@@ -50,6 +50,7 @@ export default function HomeScreen() {
     guardarAjustes,
     detenerAlarma,
     solicitarPermiso,
+    cerrarBannerPermiso,
   } = useTimer();
 
   const [mostrarConfirmacionReinicio, setMostrarConfirmacionReinicio] =
@@ -125,8 +126,6 @@ export default function HomeScreen() {
     }
   };
 
-  const [guardadoNuevosValores, setGuardadoNuevosValores] = useState(false);
-
   const onGuardarAjustes = async () => {
     if (!validoParaGuardarAjustes) {
       return;
@@ -145,12 +144,8 @@ export default function HomeScreen() {
           [campo]: resultado.mensaje ?? 'valor inválido',
         }));
       } else {
-        const numero = Number(texto);
-        if (campo === 'cicloPomodoros') {
-          campos[campo] = numero;
-        } else {
-          campos[campo] = numero * 60;
-        }
+        // El hook recibe minutos (rango RANGOS) y los convierte a segundos.
+        campos[campo] = Number(texto);
       }
     }
 
@@ -160,27 +155,13 @@ export default function HomeScreen() {
 
     try {
       const guardado = await guardarAjustes(campos);
-      setGuardadoNuevosValores(true);
       guardadoRef.current = guardado;
       setMostrarAjustes(false);
     } catch (error: unknown) {
-      setMostrarAjustes(false);
       const mensaje = error instanceof Error ? error.message : String(error);
-      setErroresAjustes((prev) => ({
-        ...prev,
-        _general: mensaje,
-      }));
+      Alert.alert('No se pudieron guardar los cambios', mensaje, [{ text: 'Aceptar' }]);
     }
   };
-
-  if (guardadoNuevosValores) {
-    Alert.alert(
-      'Tiempos actualizados',
-      `Estudio ${valoresAjustes.estudio} min, Descanso corto ${valoresAjustes.descansoCorto} min, Descanso largo ${valoresAjustes.descansoLargo} min, ${valoresAjustes.cicloPomodoros} pomodoros por ciclo. Se aplicarán a la próxima iteración de cada fase.`,
-      [{ text: 'Aceptar' }],
-    );
-    setGuardadoNuevosValores(false);
-  }
 
   const onRestablecerAjustes = (aceptar: boolean) => {
     setMostrarConfirmacionFabrica(false);
@@ -231,9 +212,7 @@ export default function HomeScreen() {
           <PermissionBanner
             mensaje={mensajePermiso}
             onHabilitar={solicitarPermiso}
-            onCerrar={() => {
-              // No navega; solo oculta el banner.
-            }}
+            onCerrar={cerrarBannerPermiso}
           />
         )}
         <TimerDisplay
@@ -370,10 +349,7 @@ export default function HomeScreen() {
                     styles.modalBotonGuardar,
                     !validoParaGuardarAjustes && styles.modalBotonDeshabilitado,
                   ]}
-                  onPress={() => {
-                    onGuardarAjustes();
-                    setGuardadoNuevosValores(true);
-                  }}
+                  onPress={onGuardarAjustes}
                   disabled={!validoParaGuardarAjustes}
                 >
                   <ThemedText type="smallBold" style={styles.modalTextoBoton}>
