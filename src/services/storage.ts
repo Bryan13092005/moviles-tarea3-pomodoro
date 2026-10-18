@@ -8,8 +8,10 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type TimerState } from '../domain/timer';
+import { type Configuracion } from '../domain/config';
 
 const CLAVE = '@pomodoro/state';
+const CLAVE_CONFIG = '@pomodoro/config';
 
 /**
  * Guarda el estado de forma sincrónica/atómica tras cada cambio.
@@ -35,4 +37,31 @@ export async function cargarEstado(): Promise<TimerState | null> {
     return null;
   }
   return JSON.parse(raw) as TimerState;
+}
+
+/**
+ * Guarda la configuración de ajustes del usuario (duraciones preferidas y ciclo de pomodoros).
+ * Clave separada de @pomodoro/state: la configuración es un ajuste independiente del
+ * ciclo de vida del temporizador (Decisión 1, plan §6).
+ * Constitución §4: guardar antes de suspender.
+ */
+export async function guardarConfiguracion(config: Configuracion): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CLAVE_CONFIG, JSON.stringify(config));
+  } catch (error: unknown) {
+    const mensaje = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error al guardar la configuración: ${mensaje}`);
+  }
+}
+
+/**
+ * Carga la configuración de ajustes. Devuelve null si no hay previo (instalación nueva;
+ * el hook debe usar CONFIG_FABRICA en ese caso).
+ */
+export async function cargarConfiguracion(): Promise<Configuracion | null> {
+  const raw = await AsyncStorage.getItem(CLAVE_CONFIG);
+  if (raw === null) {
+    return null;
+  }
+  return JSON.parse(raw) as Configuracion;
 }

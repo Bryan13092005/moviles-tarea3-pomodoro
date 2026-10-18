@@ -6,7 +6,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { guardarEstado, cargarEstado } from '../services/storage';
+import { guardarEstado, cargarEstado, guardarConfiguracion, cargarConfiguracion } from '../services/storage';
 import {
   initialState,
   recalculateOnResume,
@@ -14,6 +14,7 @@ import {
   type TimerState,
   type TickResult,
 } from '../domain/timer';
+import { type Configuracion, CONFIG_FABRICA } from '../domain/config';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store: Record<string, string> = {};
@@ -121,5 +122,59 @@ describe('storage', () => {
     (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error(motivo));
     // Debe rechazar la promesa con el motivo (no lanzar de forma síncrona ni bloquear)
     await expect(guardarEstado(MOCK_STATE)).rejects.toThrow(motivo);
+  });
+});
+
+describe('configuración (RF-03)', () => {
+  beforeEach(() => {
+    (AsyncStorage.getItem as jest.Mock).mockClear();
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+    (AsyncStorage as any).__store = {};
+  });
+
+  it('guarda y carga la configuración correctamente con clave @pomodoro/config', async () => {
+    const config: Configuracion = {
+      estudio: 25 * 60,
+      descansoCorto: 5 * 60,
+      descansoLargo: 15 * 60,
+      cicloPomodoros: 4,
+    };
+    await guardarConfiguracion(config);
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      '@pomodoro/config',
+      JSON.stringify(config),
+    );
+
+    const cargado = await cargarConfiguracion();
+    expect(cargado).toEqual(config);
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@pomodoro/config');
+  });
+
+  it('devuelve null cuando no hay configuración previa (instalación nueva)', async () => {
+    const cargado = await cargarConfiguracion();
+    expect(cargado).toBeNull();
+  });
+
+  it('sobrescribe la configuración previa al guardar de nuevo', async () => {
+    const config1: Configuracion = { ...CONFIG_FABRICA, estudio: 30 * 60 };
+    const config2: Configuracion = { ...CONFIG_FABRICA, estudio: 20 * 60 };
+    await guardarConfiguracion(config1);
+    await guardarConfiguracion(config2);
+    const cargado = await cargarConfiguracion();
+    expect(cargado?.estudio).toBe(20 * 60);
+  });
+
+  it('RF-03: la configuración persiste tras cierre simulado (misma clave AsyncStorage)', async () => {
+    const config: Configuracion = { ...CONFIG_FABRICA, cicloPomodoros: 5 };
+    await guardarConfiguracion(config);
+    // Simular cierre de app: el mock __store persiste entre llamadas
+    const cargado = await cargarConfiguracion();
+    expect(cargado).toEqual(config);
+  });
+
+  it('RF-03: AsyncStorage rechaza setItem -> guardarConfiguracion rechaza con el motivo', async () => {
+    const motivo = 'No hay espacio en el dispositivo';
+    (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error(motivo));
+    await expect(guardarConfiguracion(CONFIG_FABRICA)).rejects.toThrow(motivo);
   });
 });

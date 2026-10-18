@@ -5,13 +5,13 @@
 
 export const POMODORO_CONFIG = {
   /** Tiempo de Estudio: 25 minutos (1500 s) */
-  estudio: 25 * 60,
+  estudio: 1 * 60,
   /** Descanso Corto: 5 minutos (300 s) */
-  descansoCorto: 5 * 60,
+  descansoCorto: 1 * 60,
   /** Descanso Largo: 15 minutos (900 s) */
-  descansoLargo: 15 * 60,
+  descansoLargo: 2 * 60,
   /** Cantidad de pomodoros por ciclo antes del Descanso Largo */
-  cicloPomodoros: 4,
+  cicloPomodoros: 3,
 } as const;
 
 export type FasePomodoro = 'estudio' | 'descansoCorto' | 'descansoLargo';

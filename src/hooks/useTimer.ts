@@ -13,7 +13,7 @@
  * RF-02…RF-14, RF-08, RF-09, RNF-01, RNF-02.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { AppState } from 'react-native';
 
 import {
@@ -28,9 +28,16 @@ import {
   type TimerState,
   type TickResult,
   type FaseCompletadaEvent,
+  type FasePomodoro,
 } from '@/domain/timer';
 import { DURACION_POR_FASE } from '@/constants/pomodoro';
-import { guardarEstado, cargarEstado } from '@/services/storage';
+import {
+  validarConfiguracion,
+  puedeCambiarCicloPomodoros,
+  CONFIG_FABRICA,
+  type Configuracion,
+} from '@/domain/config';
+import { guardarEstado, cargarEstado, guardarConfiguracion, cargarConfiguracion } from '@/services/storage';
 import { alarmService } from '@/services/alarm';
 import { solicitarPermisoAlarma, MENSAJE_PERMISO_ALARMA } from '@/services/permissions';
 
@@ -64,6 +71,14 @@ export interface UseTimerReturn {
   reiniciarCompleto: () => Promise<void>;
   detenerAlarma: () => void;
   solicitarPermiso: () => Promise<void>;
+  /** Configuración actual de ajustes (duraciones y ciclo de pomodoros). */
+  configuracion: Configuracion;
+  /** Cantidad de pomodoros por ciclo configurada. */
+  cicloPomodoros: number;
+  /** Guarda nuevos valores, los persiste y los aplica a la siguiente iteración de cada fase (sin tocar la fase en curso). Lanza si hay errores de validación o si el nuevo cicloPomodoros es menor que los pomodoros completados (RF-11). */
+  guardarAjustes: (campos: Partial<Configuracion>) => Promise<Configuracion>;
+  /** Restablece a valores de fábrica si confirmar es true (detiene el temporizador y resetea pomodoros); si false, preserva todo. */
+  restablecerAjustes: (confirmar: boolean) => Promise<void>;
 }
 
 /**
@@ -80,10 +95,13 @@ function manejarFaseCompletada(
   setTiempoMostrar: React.Dispatch<React.SetStateAction<number>>,
   setAlarmaActiva: (v: boolean) => void,
   alarmTimeoutRef: React.MutableRefObject<number | null>,
+  duraciones: Record<FasePomodoro, number>,
+  cicloPomodoros: number,
 ) {
   const estadoTransicion = completePhase(
     { ...state, fase: faseAnterior },
-    DURACION_POR_FASE,
+    duraciones,
+    cicloPomodoros,
   );
   persist(estadoTransicion);
   setTiempoMostrar(estadoTransicion.tiempoRestante);
@@ -106,6 +124,15 @@ export function useTimer(): UseTimerReturn {
   const [errorPersistencia, setErrorPersistencia] = useState<string | null>(null);
   /** Estado separado para forzar re-render cada segundo mientras corre. */
   const [tiempoMostrar, setTiempoMostrar] = useState(state.tiempoRestante);
+  /** Configuración de ajustes del usuario (duraciones y ciclo de pomodoros). */
+  const [configuracion, setConfiguracion] = useState<Configuracion>(CONFIG_FABRICA);
+  /** Duraciones y ciclo derivados de la configuración actual (se aplican a la siguiente iteración de cada fase). */
+  const duraciones = useMemo<Record<FasePomodoro, number>>(() => ({
+    estudio: configuracion.estudio,
+    descansoCorto: configuracion.descansoCorto,
+    descansoLargo: configuracion.descansoLargo,
+  }), [configuracion.estudio, configuracion.descansoCorto, configuracion.descansoLargo]);
+  const cicloPomodoros = configuracion.cicloPomodoros;
   /** ID del setTimeout de silencio automático a los 30 s (RF-05). */
   const alarmTimeoutRef = useRef<number | null>(null);
 
@@ -145,6 +172,8 @@ export function useTimer(): UseTimerReturn {
             setTiempoMostrar,
             setAlarmaActiva,
             alarmTimeoutRef,
+            duraciones,
+            cicloPomodoros,
           );
         } else {
           setState(siguiente as TimerState);
@@ -152,6 +181,13 @@ export function useTimer(): UseTimerReturn {
       }
 
       setPermisoConcedido(await solicitarPermisoAlarma(alarmService));
+
+      // Carga la configuración de ajustes al montar (RF-03).
+      // Si no hay previa, se mantiene CONFIG_FABRICA (estado inicial).
+      const guardadoConfig = await cargarConfiguracion();
+      if (montado && guardadoConfig) {
+        setConfiguracion({ ...CONFIG_FABRICA, ...guardadoConfig });
+      }
     })();
     return () => {
       montado = false;
@@ -179,9 +215,11 @@ export function useTimer(): UseTimerReturn {
         setTiempoMostrar,
         setAlarmaActiva,
         alarmTimeoutRef,
+        duraciones,
+        cicloPomodoros,
       );
     }
-  }, [state, tiempoMostrar, alarmTimeoutRef]);
+  }, [state, tiempoMostrar, alarmTimeoutRef, duraciones, cicloPomodoros]);
 
   // --- Recalcular al volver de segundo plano / desbloquear dispositivo ---
   useEffect(() => {
@@ -197,6 +235,8 @@ export function useTimer(): UseTimerReturn {
             setTiempoMostrar,
             setAlarmaActiva,
             alarmTimeoutRef,
+            duraciones,
+            cicloPomodoros,
           );
         } else {
           persist(resultado as TimerState);
@@ -204,7 +244,7 @@ export function useTimer(): UseTimerReturn {
       }
     });
     return () => suscripcion.remove();
-  }, [state, persist, alarmTimeoutRef]);
+  }, [state, persist, alarmTimeoutRef, duraciones, cicloPomodoros]);
 
   // --- Interval que actualiza tiempoMostrar cada segundo (RF-03) ---
   // Solo toca el estado de visualización, nunca el estado del temporizador.
@@ -228,12 +268,12 @@ export function useTimer(): UseTimerReturn {
     }
     setMostrarBannerPermiso(false);
     setState(current => {
-      const siguiente = start(current, ahoraEnSegundos(), DURACION_POR_FASE);
+      const siguiente = start(current, ahoraEnSegundos(), duraciones, cicloPomodoros);
       persist(siguiente);
       setTiempoMostrar(siguiente.tiempoRestante);
       return siguiente;
     });
-  }, []);
+  }, [duraciones, cicloPomodoros]);
 
   const pausar = useCallback(async () => {
     setState(current => {
@@ -301,6 +341,66 @@ export function useTimer(): UseTimerReturn {
     setMostrarBannerPermiso(!tienePermiso); // RNF-02, Constitución §1.3
   }, []);
 
+  const guardarAjustes = useCallback(
+    async (campos: Partial<Configuracion>): Promise<Configuracion> => {
+      // RF-11: rechazar si el nuevo cicloPomodoros es menor que los pomodoros completados
+      if (
+        campos.cicloPomodoros !== undefined &&
+        !puedeCambiarCicloPomodoros(state.pomodoros, campos.cicloPomodoros)
+      ) {
+        throw new Error(
+          `No se pueden establecer ${campos.cicloPomodoros} pomodoros por ciclo: ya llevas ${state.pomodoros} completados en este ciclo.`,
+        );
+      }
+
+      // RF-01, RF-06: validar campos antes de guardar
+      const resultado = validarConfiguracion(campos);
+      if (!resultado.valido) {
+        const mensajes = Object.entries(resultado.errores)
+          .map(([campo, error]) => `${campo}: ${error}`)
+          .join('; ');
+        throw new Error(mensajes);
+      }
+
+      // Los campos de tiempo entran en minutos (rango RANGOS) y se guardan en segundos (modelo de dominio).
+      const configuracionNueva: Configuracion = { ...configuracion };
+      if (campos.estudio !== undefined) {
+        configuracionNueva.estudio = campos.estudio * 60;
+      }
+      if (campos.descansoCorto !== undefined) {
+        configuracionNueva.descansoCorto = campos.descansoCorto * 60;
+      }
+      if (campos.descansoLargo !== undefined) {
+        configuracionNueva.descansoLargo = campos.descansoLargo * 60;
+      }
+      if (campos.cicloPomodoros !== undefined) {
+        configuracionNueva.cicloPomodoros = campos.cicloPomodoros;
+      }
+
+      // RF-03: persistir en clave separada
+      await guardarConfiguracion(configuracionNueva);
+      setConfiguracion(configuracionNueva);
+      // RF-02, RF-10: no se toca state.tiempoRestante ni duracionFase de la fase actual;
+      // los nuevos valores aplican a la siguiente iteración de cada fase.
+      return configuracionNueva;
+    },
+    [configuracion, state.pomodoros],
+  );
+
+  const restablecerAjustes = useCallback(async (confirmar: boolean): Promise<void> => {
+    // RF-09: cancelar preserva valores y estado exactamente
+    if (!confirmar) {
+      return;
+    }
+    // RF-08: valores de fábrica, detiene el temporizador, resetea pomodoros a 0
+    await guardarConfiguracion(CONFIG_FABRICA);
+    setConfiguracion(CONFIG_FABRICA);
+    const siguiente = reinicioCompleto();
+    setState(siguiente);
+    setTiempoMostrar(siguiente.tiempoRestante);
+    persist(siguiente);
+  }, []);
+
   return {
     state,
     tiempoMostrar,
@@ -309,6 +409,10 @@ export function useTimer(): UseTimerReturn {
     mostrarBannerPermiso,
     mensajePermiso: MENSAJE_PERMISO_ALARMA,
     errorPersistencia,
+    configuracion,
+    cicloPomodoros,
+    guardarAjustes,
+    restablecerAjustes,
     iniciar,
     pausar,
     reanudar,

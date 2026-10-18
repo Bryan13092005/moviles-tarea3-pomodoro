@@ -86,7 +86,7 @@ describe('durationFor', () => {
 describe('start', () => {
   it('detenido -> corriendo con startedAt = now', () => {
     const s = estadoBase();
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.status).toBe('corriendo');
     expect(r.startedAt).toBe(1000);
     expect(r.tiempoRestante).toBe(1500);
@@ -94,14 +94,14 @@ describe('start', () => {
 
   it('ya corriendo -> no-op (no resetea startedAt)', () => {
     const s = estadoBase({ status: 'corriendo', startedAt: 500 });
-    const r = start(s, 9999, CONFIG_DURACIONES);
+    const r = start(s, 9999, CONFIG_DURACIONES, 4);
     expect(r.status).toBe('corriendo');
     expect(r.startedAt).toBe(500);
   });
 
   it('fase en 00:00 al iniciar -> restaura duración completa', () => {
     const s = estadoBase({ tiempoRestante: 0, duracionFase: 300 });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.tiempoRestante).toBe(300);
     expect(r.status).toBe('corriendo');
     expect(r.startedAt).toBe(1000);
@@ -113,7 +113,7 @@ describe('start', () => {
       pomodoros: 1,
       faseAnterior: 'estudio',
     });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.status).toBe('corriendo');
     expect(r.pomodoros).toBe(2);
   });
@@ -124,7 +124,7 @@ describe('start', () => {
       pomodoros: 3,
       faseAnterior: 'estudio',
     });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.pomodoros).toBe(4);
   });
 
@@ -134,7 +134,7 @@ describe('start', () => {
       pomodoros: 3,
       faseAnterior: 'estudio',
     });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.pomodoros).toBe(4); // tope del ciclo, no 5
   });
 
@@ -144,7 +144,7 @@ describe('start', () => {
       pomodoros: 4,
       faseAnterior: 'estudio',
     });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.pomodoros).toBe(4); // no se incrementa más allá de 4 durante el ciclo cerrado
   });
 
@@ -154,7 +154,7 @@ describe('start', () => {
       pomodoros: 4,
       faseAnterior: 'descansoLargo',
     });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.pomodoros).toBe(0);
   });
 
@@ -164,14 +164,24 @@ describe('start', () => {
       pomodoros: 2,
       faseAnterior: 'descansoCorto',
     });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.pomodoros).toBe(2);
   });
 
   it('iniciar estudio sin faseAnterior previa no resetea pomodoros', () => {
     const s = estadoBase({ fase: 'estudio', pomodoros: 2, faseAnterior: null });
-    const r = start(s, 1000, CONFIG_DURACIONES);
+    const r = start(s, 1000, CONFIG_DURACIONES, 4);
     expect(r.pomodoros).toBe(2);
+  });
+
+  it('start con ciclo personalizado (3): iniciar descanso corto no excede el nuevo límite', () => {
+    const s = estadoBase({
+      fase: 'descansoCorto',
+      pomodoros: 3,
+      faseAnterior: 'estudio',
+    });
+    const r = start(s, 1000, CONFIG_DURACIONES, 3);
+    expect(r.pomodoros).toBe(3); // tope del ciclo personalizado, no 4
   });
 });
 
@@ -308,7 +318,7 @@ describe('tick', () => {
 describe('completePhase', () => {
   it('estudio -> descanso corto, pomodoros NO se incrementan al terminar (RF-04)', () => {
     const s = estadoBase({ fase: 'estudio', pomodoros: 0 });
-    const r = completePhase(s, CONFIG_DURACIONES);
+    const r = completePhase(s, CONFIG_DURACIONES, 4);
     expect(r.fase).toBe('descansoCorto');
     expect(r.pomodoros).toBe(0); // se incrementa solo al iniciar el descanso (Decisión 5)
     expect(r.status).toBe('detenido');
@@ -319,7 +329,7 @@ describe('completePhase', () => {
 
   it('al llegar a 4 -> descanso largo, pomodoros se mantienen hasta iniciar (RF-02)', () => {
     const s = estadoBase({ fase: 'estudio', pomodoros: 3 });
-    const r = completePhase(s, CONFIG_DURACIONES);
+    const r = completePhase(s, CONFIG_DURACIONES, 4);
     expect(r.fase).toBe('descansoLargo');
     expect(r.pomodoros).toBe(3); // no se toca al terminar estudio (Decisión 5/6)
     expect(r.tiempoRestante).toBe(900);
@@ -330,7 +340,7 @@ describe('completePhase', () => {
 
   it('descanso corto -> estudio, detenido, duración completa (RF-03)', () => {
     const s = estadoBase({ fase: 'descansoCorto', pomodoros: 2 });
-    const r = completePhase(s, CONFIG_DURACIONES);
+    const r = completePhase(s, CONFIG_DURACIONES, 4);
     expect(r.fase).toBe('estudio');
     expect(r.pomodoros).toBe(2);
     expect(r.status).toBe('detenido');
@@ -340,10 +350,22 @@ describe('completePhase', () => {
 
   it('descanso largo -> estudio, detenido, duración completa (RF-03)', () => {
     const s = estadoBase({ fase: 'descansoLargo', pomodoros: 0 });
-    const r = completePhase(s, CONFIG_DURACIONES);
+    const r = completePhase(s, CONFIG_DURACIONES, 4);
     expect(r.fase).toBe('estudio');
     expect(r.tiempoRestante).toBe(1500);
     expect(r.faseAnterior).toBe('descansoLargo');
+  });
+
+  it('completePhase con ciclo personalizado (3): estudio con 2 pomodoros → descanso largo', () => {
+    const s = estadoBase({ fase: 'estudio', pomodoros: 2 });
+    const r = completePhase(s, CONFIG_DURACIONES, 3);
+    expect(r.fase).toBe('descansoLargo'); // 2 + 1 >= 3
+  });
+
+  it('completePhase con ciclo personalizado (5): estudio con 2 pomodoros → descanso corto', () => {
+    const s = estadoBase({ fase: 'estudio', pomodoros: 2 });
+    const r = completePhase(s, CONFIG_DURACIONES, 5);
+    expect(r.fase).toBe('descansoCorto'); // 2 + 1 < 5
   });
 });
 

@@ -1,4 +1,4 @@
-/// <reference types="jest" />
+﻿/// <reference types="jest" />
 
 /**
  * Pruebas del hook orquestador useTimer.
@@ -17,6 +17,8 @@ jest.setSystemTime(1_000_000_000); // ahoraEnSegundos() determinista en pruebas
 jest.mock('@/services/storage', () => ({
   guardarEstado: jest.fn(),
   cargarEstado: jest.fn(),
+  guardarConfiguracion: jest.fn(),
+  cargarConfiguracion: jest.fn(),
 }));
 jest.mock('@/services/alarm', () => ({
   alarmService: {
@@ -33,9 +35,10 @@ jest.mock('@/services/permissions', () => ({
   MENSAJE_PERMISO_ALARMA: 'mensaje de permiso de prueba',
 }));
 
-import { guardarEstado, cargarEstado } from '@/services/storage';
+import { guardarEstado, cargarEstado, guardarConfiguracion, cargarConfiguracion } from '@/services/storage';
 import { solicitarPermisoAlarma } from '@/services/permissions';
 import { initialState } from '@/domain/timer';
+import { CONFIG_FABRICA } from '@/domain/config';
 
 let hookResult: any;
 let instance: any;
@@ -53,8 +56,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.setSystemTime(1_000_000_000); // reloj falso determinista para cada prueba
   (cargarEstado as jest.Mock).mockResolvedValue(null);
+  (cargarConfiguracion as jest.Mock).mockResolvedValue(null);
   (solicitarPermisoAlarma as jest.Mock).mockResolvedValue(true);
   (guardarEstado as jest.Mock).mockResolvedValue(undefined);
+  (guardarConfiguracion as jest.Mock).mockResolvedValue(undefined);
   hookResult = null;
   instance = null;
 });
@@ -245,3 +250,125 @@ describe('useTimer – carga al montar y recálculo por timestamps', () => {
     expect(hookResult.state.startedAt).toBeNull();
   });
 });
+
+describe('useTimer – ajustes de configuración (Spec 005)', () => {
+  it('RF-01/RF-02: guardarAjustes valida, persiste y aplica a siguiente iteración sin alterar la fase actual', async () => {
+    renderHook();
+    await act(async () => {});
+
+    await act(async () => {
+      await hookResult.iniciar();
+    });
+    const faseActual = hookResult.state.fase;
+    const tiempoRestanteAntes = hookResult.state.tiempoRestante;
+    const duracionFaseAntes = hookResult.state.duracionFase;
+
+    await act(async () => {
+      await hookResult.guardarAjustes({ estudio: 30 });
+    });
+
+    // La fase actual no se altera (RF-02, RF-10)
+    expect(hookResult.state.fase).toBe(faseActual);
+    expect(hookResult.state.tiempoRestante).toBe(tiempoRestanteAntes);
+    expect(hookResult.state.duracionFase).toBe(duracionFaseAntes);
+
+    // La configuración se actualiza y se persiste (aplica a siguiente iteración)
+    expect(hookResult.configuracion.estudio).toBe(30 * 60);
+    expect(guardarConfiguracion).toHaveBeenCalled();
+  });
+
+  it('RF-01: guardarAjustes no guarda si hay errores de validación', async () => {
+    renderHook();
+    await act(async () => {});
+
+    await expect(hookResult.guardarAjustes({ estudio: 0 })).rejects.toThrow();
+    expect(guardarConfiguracion).not.toHaveBeenCalled();
+  });
+
+  it('RF-11: guardarAjustes rechaza reducir cicloPomodoros por debajo del contador actual', async () => {
+    renderHook();
+    await act(async () => {});
+
+    await act(async () => {
+      await hookResult.iniciar();
+    });
+
+    // Forzar pomodoros en 5 (simulando ciclo avanzado)
+    (cargarEstado as jest.Mock).mockResolvedValue({
+      ...initialState(),
+      pomodoros: 5,
+      fase: 'estudio',
+      status: 'detenido',
+      tiempoRestante: 1500,
+      duracionFase: 1500,
+      startedAt: null,
+      faseAnterior: null,
+    });
+
+    renderHook();
+    await act(async () => {});
+
+    expect(hookResult.state.pomodoros).toBe(5);
+
+    await expect(
+      hookResult.guardarAjustes({ cicloPomodoros: 4 })
+    ).rejects.toThrow();
+    expect(guardarConfiguracion).not.toHaveBeenCalled();
+  });
+
+  it('RF-08: restablecerAjustes(true) devuelve a fábrica, detiene el temporizador y resetea pomodoros', async () => {
+    renderHook();
+    await act(async () => {});
+
+    await act(async () => {
+      await hookResult.iniciar();
+    });
+    expect(hookResult.state.status).toBe('corriendo');
+
+    await act(async () => {
+      await hookResult.restablecerAjustes(true);
+    });
+
+    expect(hookResult.state).toEqual({
+      fase: 'estudio',
+      status: 'detenido',
+      tiempoRestante: 1500,
+      duracionFase: 1500,
+      pomodoros: 0,
+      startedAt: null,
+      faseAnterior: null,
+    });
+    expect(hookResult.configuracion).toEqual(CONFIG_FABRICA);
+    expect(guardarConfiguracion).toHaveBeenCalledWith(CONFIG_FABRICA);
+  });
+
+  it('RF-09: restablecerAjustes(false) preserva valores y estado exactamente', async () => {
+    renderHook();
+    await act(async () => {});
+
+    // Primero cambiar la configuración para que sea distinta de fábrica
+    await act(async () => {
+      await hookResult.guardarAjustes({ estudio: 30 });
+    });
+    const configuracionAntes = hookResult.configuracion;
+    expect(configuracionAntes.estudio).toBe(30 * 60);
+
+    await act(async () => {
+      await hookResult.iniciar();
+    });
+    const estadoAntes = hookResult.state;
+
+    // Limpiar mocks para verificar que restablecerAjustes(false) no persiste
+    (guardarConfiguracion as jest.Mock).mockClear();
+
+    await act(async () => {
+      await hookResult.restablecerAjustes(false);
+    });
+
+    expect(hookResult.state).toEqual(estadoAntes);
+    expect(hookResult.configuracion).toEqual(configuracionAntes);
+    // restablecerAjustes(false) no debe persistir nada (RF-09)
+    expect(guardarConfiguracion).not.toHaveBeenCalled();
+  });
+});
+

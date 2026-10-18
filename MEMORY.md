@@ -52,6 +52,23 @@ Todas las 5 tareas implementadas (✅):
 
 npx jest: 54 pruebas verdes (4 suites: alarm, timerLogic, storage, useTimer). npx tsc --noEmit: sin errores.
 
+Spec 005 — AjusteTiempo (HU-005): TODAS LAS TAREAS COMPLETADAS (✅).
+- T1 Dominio: `src/domain/config.ts` (RF-01, RF-05, RF-06, RF-07, RF-11).
+- T2 Pruebas: `src/__tests__/config.test.ts` (33 pruebas).
+- T3 Dominio: `start()`/`completePhase()` reciben `cicloPomodoros` (RF-02, RF-10, RF-11).
+- T4 Persistencia: `guardarConfiguracion`/`cargarConfiguracion` clave `@pomodoro/config` (RF-03).
+- T5 Pruebas: 5 pruebas nuevas en `storage.test.ts` (RF-03).
+- T6 Hook: `guardarAjustes`/`restablecerAjustes` en `useTimer.ts` + estado `configuracion` (RF-01, RF-02, RF-03, RF-04, RF-08, RF-09, RF-10, RF-11).
+- T7 Pruebas: 5 pruebas nuevas en `useTimer.test.ts` (RF-01, RF-02, RF-08, RF-09, RF-10, RF-11).
+- T8 UI: `src/app/(tabs)/ajuste-tiempo.tsx` (RF-01, RF-04, RF-05, RF-06, RF-07, RF-08, RF-09, RF-10). Botones flotantes ⚙️ (ajustes) y 🔄 (fábrica) en `src/app/(tabs)/index.tsx`, esquina inferior derecha. Modal de ajustes con validación en tiempo real. Alert nativo de confirmación al guardar (RF-04). Verificada en Expo Go por el usuario.
+- T9 Verificación final: `npx jest` 100 pruebas verdes (5 suites), `npx tsc --noEmit` sin errores, `npx expo lint` sin errores nuevos (solo preexistentes en use-color-scheme.web.ts).
+
+## Estado del proyecto
+
+Spec 005 — AjusteTiempo (HU-005): IMPLEMENTADA COMPLETAMENTE.
+Todos los 11 RF (RF-01 a RF-11) y 3 RNF (RNF-01 a RNF-03) cubiertos.
+Todas las 9 tareas marcadas como hechas en tasks.md.
+
 ## Próximos pasos
 
-Spec 004 — Aviso de Fin de Fase (HU-004): CERRADA / IMPLEMENTADA. No hay tareas pendientes de esta spec.
+No hay próximos pasos de Spec 005 pendientes.

@@ -28,11 +28,13 @@ export type TimerDisplayProps = {
     duracionFase: number;
   };
   tiempoMostrar: number; // tiempo restante calculado en tiempo real para mostrar
+  cicloPomodoros: number; // cantidad de pomodoros por ciclo configurada
 };
 
 export function TimerDisplay({
   state,
   tiempoMostrar,
+  cicloPomodoros,
 }: TimerDisplayProps) {
   const etiqueta = ETIQUETA_FASE[state.fase] ?? state.fase;
 
@@ -57,10 +59,10 @@ export function TimerDisplay({
       <ThemedText
         type="smallBold"
         style={styles.pomodoros}
-        accessibilityLabel={`Pomodoros: ${state.pomodoros} de 4`}
+        accessibilityLabel={`Pomodoros: ${state.pomodoros} de ${cicloPomodoros}`}
         accessibilityRole="text"
       >
-        Pomodoros: {state.pomodoros}/4
+        Pomodoros: {state.pomodoros}/{cicloPomodoros}
       </ThemedText>
     </ThemedView>
   );

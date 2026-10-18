@@ -7,7 +7,6 @@
 
 import {
   DURACION_POR_FASE,
-  POMODORO_CONFIG,
   type FasePomodoro,
 } from '../constants/pomodoro';
 
@@ -84,6 +83,7 @@ export function start(
   state: TimerState,
   now: number,
   duraciones: Record<FasePomodoro, number>,
+  cicloPomodoros: number,
 ): TimerState {
   if (state.status === 'corriendo') {
     return state;
@@ -92,7 +92,7 @@ export function start(
     state.tiempoRestante <= 0 ? state.duracionFase : state.tiempoRestante;
   let nuevosPomodoros = state.pomodoros;
   if (state.fase === 'descansoCorto' || state.fase === 'descansoLargo') {
-    nuevosPomodoros = Math.min(state.pomodoros + 1, POMODORO_CONFIG.cicloPomodoros); // RF-04; Decisión 6: no excede el límite del ciclo (evita 5/4, 6/4… al reiniciar+e iniciar un descanso)
+    nuevosPomodoros = Math.min(state.pomodoros + 1, cicloPomodoros); // RF-04; Decisión 6: no excede el límite del ciclo
   }
   if (state.fase === 'estudio' && state.faseAnterior === 'descansoLargo') {
     nuevosPomodoros = 0; // RF-05
@@ -193,12 +193,13 @@ export function tick(state: TimerState, now: number): TickResult {
 export function completePhase(
   state: TimerState,
   duraciones: Record<FasePomodoro, number>,
+  cicloPomodoros: number,
 ): TimerState {
   let siguienteFase: FasePomodoro;
 
   if (state.fase === 'estudio') {
     const pomodorosSiguiente = state.pomodoros + 1;
-    if (pomodorosSiguiente >= POMODORO_CONFIG.cicloPomodoros) {
+    if (pomodorosSiguiente >= cicloPomodoros) {
       siguienteFase = 'descansoLargo'; // RF-02
     } else {
       siguienteFase = 'descansoCorto'; // RF-01
