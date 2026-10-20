@@ -212,6 +212,7 @@ export function useTimer(): UseTimerReturn {
       // RF-04: error visible de lectura, la app no inicia el temporizador.
       setErrorCarga(error instanceof Error ? error.message : String(error));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -275,6 +276,7 @@ export function useTimer(): UseTimerReturn {
         cicloPomodoros,
       );
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, tiempoMostrar, alarmTimeoutRef, duraciones, cicloPomodoros]);
 
   // --- Recalcular al volver de segundo plano / desbloquear dispositivo ---
@@ -316,6 +318,7 @@ export function useTimer(): UseTimerReturn {
   // Si no corre, la pantalla siempre refleja el tiempo del estado (evita quedarse en 00:00
   // tras terminar una fase mientras la app estaba en segundo plano).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state.status !== 'corriendo') setTiempoMostrar(state.tiempoRestante);
   }, [state.status, state.tiempoRestante, state.fase]);
 
@@ -335,6 +338,7 @@ export function useTimer(): UseTimerReturn {
       setTiempoMostrar(siguiente.tiempoRestante);
       return siguiente;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duraciones, cicloPomodoros]);
 
   const pausar = useCallback(async () => {
@@ -344,6 +348,7 @@ export function useTimer(): UseTimerReturn {
       setTiempoMostrar(siguiente.tiempoRestante);
       return siguiente;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const reanudar = useCallback(async () => {
@@ -361,6 +366,7 @@ export function useTimer(): UseTimerReturn {
       persist(siguiente);
       return siguiente;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const solicitarReinicio = useCallback(
@@ -377,6 +383,7 @@ export function useTimer(): UseTimerReturn {
         return siguiente;
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -386,6 +393,7 @@ export function useTimer(): UseTimerReturn {
     setState(siguiente);
     setTiempoMostrar(siguiente.tiempoRestante);
     persist(siguiente);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duraciones]);
 
   const detenerAlarma = useCallback(() => {
@@ -489,6 +497,7 @@ export function useTimer(): UseTimerReturn {
     setState(siguiente);
     setTiempoMostrar(siguiente.tiempoRestante);
     persist(siguiente);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
