@@ -6,10 +6,12 @@
  * La fase se comunica siempre con texto + indicador de color además del color.
  */
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { TimerRing } from '@/components/timer/TimerRing';
+import { useTheme } from '@/hooks/use-theme';
 import { formatMMSS } from '@/domain/timer';
 import { Spacing, ThemeColor } from '@/constants/theme';
 
@@ -46,6 +48,11 @@ export function TimerDisplay({
 }: TimerDisplayProps) {
   const etiqueta = ETIQUETA_FASE[state.fase] ?? state.fase;
   const indicadorColor = COLOR_INDICADOR_FASE[state.fase] ?? 'primary';
+  const theme = useTheme();
+  const completados = Math.min(state.pomodoros, cicloPomodoros);
+  const progresoFase =
+    state.duracionFase > 0 ? 1 - tiempoMostrar / state.duracionFase : 0;
+  const progreso = cicloPomodoros > 0 ? completados / cicloPomodoros : 0;
 
   return (
     <ThemedView type="surface" style={styles.container}>
@@ -63,18 +70,19 @@ export function TimerDisplay({
         </ThemedText>
       </ThemedView>
 
-      {/* Tiempo restante: acento de tiempo (fondo dorado, texto institucional) */}
-      <ThemedView type="primary" style={styles.timePill}>
+      {/* Tiempo restante dentro de un anillo que se llena con el avance de la fase */}
+      <TimerRing progreso={progresoFase}>
         <ThemedText
           type="title"
           style={styles.cronometro}
-          themeColor="primaryText"
+          themeColor="surfaceText"
+          numberOfLines={1}
           accessibilityLabel={`Tiempo restante ${formatMMSS(tiempoMostrar)}`}
           accessibilityRole="text"
         >
           {formatMMSS(tiempoMostrar)}
         </ThemedText>
-      </ThemedView>
+      </TimerRing>
 
       <ThemedText
         type="default"
@@ -85,6 +93,20 @@ export function TimerDisplay({
       >
         Pomodoros: {state.pomodoros}/{cicloPomodoros}
       </ThemedText>
+
+      <View
+        style={[styles.barraPista, { backgroundColor: theme.border }]}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Progreso del ciclo de pomodoros"
+        accessibilityValue={{ min: 0, max: cicloPomodoros, now: completados }}
+      >
+        <View
+          style={[
+            styles.barraRelleno,
+            { backgroundColor: theme.primary, width: `${progreso * 100}%` },
+          ]}
+        />
+      </View>
     </ThemedView>
   );
 }
@@ -112,19 +134,22 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     fontWeight: '600',
   },
-  timePill: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   cronometro: {
     textAlign: 'center',
-    fontSize: 72,
-    lineHeight: 84,
+    fontSize: 64,
+    lineHeight: 76,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+  },
+  barraPista: {
+    width: '80%',
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  barraRelleno: {
+    height: '100%',
+    borderRadius: 5,
   },
   pomodoros: {
     textAlign: 'center',

@@ -14,6 +14,7 @@ import { AlarmDialog } from '@/components/timer/AlarmDialog';
 import { ConfirmResetDialog } from '@/components/timer/ConfirmResetDialog';
 import { ErrorPersistenciaBanner } from '@/components/timer/ErrorPersistenciaBanner';
 import { PermissionBanner } from '@/components/timer/PermissionBanner';
+import { SavedSettingsDialog } from '@/components/timer/SavedSettingsDialog';
 import { TimerNotification } from '@/components/timer/TimerNotification';
 import { ErrorCargaBanner } from '@/components/timer/ErrorCargaBanner';
 import { ReinicioCompletoPomodoro } from '@/components/timer/ReinicioCompletoPomodoro';
@@ -68,6 +69,8 @@ export default function HomeScreen() {
     useState(false);
   const [mostrarAjustes, setMostrarAjustes] = useState(false);
   const guardadoRef = useRef<Configuracion | null>(null);
+  const [guardadoConfirmado, setGuardadoConfirmado] =
+    useState<Configuracion | null>(null);
 
   const estaCorriendo = state.status === 'corriendo';
   const estaPausado = state.status === 'pausado';
@@ -194,11 +197,7 @@ export default function HomeScreen() {
     if (!mostrarAjustes && guardadoRef.current) {
       const guardado = guardadoRef.current;
       guardadoRef.current = null;
-      Alert.alert(
-        'Tiempos actualizados',
-        `Estudio ${guardado.estudio / 60} min, Descanso corto ${guardado.descansoCorto / 60} min, Descanso largo ${guardado.descansoLargo / 60} min, ${guardado.cicloPomodoros} pomodoros por ciclo. Se aplicarán a la próxima iteración de cada fase.`,
-        [{ text: 'Aceptar' }],
-      );
+      setGuardadoConfirmado(guardado);
     }
   }, [mostrarAjustes]);
 
@@ -237,16 +236,21 @@ export default function HomeScreen() {
         fabContainer: {
           position: 'absolute',
           bottom: Spacing.three,
+          left: Spacing.four,
           right: Spacing.four,
-          gap: Spacing.two,
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: Spacing.three,
         },
         fab: {
-          borderRadius: 16,
-          padding: Spacing.three,
+          flex: 1,
+          flexDirection: 'row',
+          borderRadius: 12,
+          paddingHorizontal: Spacing.three,
           alignItems: 'center',
           justifyContent: 'center',
-          width: 56,
-          height: 56,
+          gap: Spacing.two,
+          minHeight: 52,
           elevation: 4,
           shadowColor: '#0E1326',
           shadowOffset: { width: 0, height: 2 },
@@ -256,13 +260,24 @@ export default function HomeScreen() {
         fabAjustes: {
           backgroundColor: theme.primary,
         },
+        fabAjustesPresionado: {
+          backgroundColor: theme.active,
+        },
         fabFabrica: {
           backgroundColor: theme.surface,
-          borderWidth: 1,
+          borderWidth: 2,
           borderColor: theme.border,
         },
-        fabText: {
-          fontSize: 22,
+        fabFabricaPresionado: {
+          borderColor: theme.primary,
+        },
+        fabIcono: {
+          fontSize: 20,
+          textAlign: 'center',
+        },
+        fabEtiqueta: {
+          fontSize: 14,
+          fontWeight: 700,
           textAlign: 'center',
         },
         // Modal styles
@@ -448,21 +463,37 @@ export default function HomeScreen() {
         {/* Botones flotantes: Ajustes y Reinicio a fábrica (esquina inferior derecha) */}
         <View style={styles.fabContainer}>
           <Pressable
-            style={[styles.fab, styles.fabAjustes]}
+            style={({ pressed }) => [
+              styles.fab,
+              styles.fabAjustes,
+              pressed && styles.fabAjustesPresionado,
+            ]}
             onPress={navegarAjustes}
+            accessibilityRole="button"
             accessibilityLabel="Abrir ajustes de tiempos"
           >
-            <ThemedText type="smallBold" style={styles.fabText} themeColor="primaryText">
+            <ThemedText type="smallBold" style={styles.fabIcono} themeColor="primaryText">
               ⚙️
+            </ThemedText>
+            <ThemedText type="smallBold" style={styles.fabEtiqueta} themeColor="primaryText">
+              Ajustes
             </ThemedText>
           </Pressable>
           <Pressable
-            style={[styles.fab, styles.fabFabrica]}
+            style={({ pressed }) => [
+              styles.fab,
+              styles.fabFabrica,
+              pressed && styles.fabFabricaPresionado,
+            ]}
             onPress={() => setMostrarConfirmacionFabrica(true)}
+            accessibilityRole="button"
             accessibilityLabel="Restablecer valores de fábrica"
           >
-            <ThemedText type="smallBold" style={styles.fabText} themeColor="surfaceText">
+            <ThemedText type="smallBold" style={styles.fabIcono} themeColor="surfaceText">
               🔄
+            </ThemedText>
+            <ThemedText type="smallBold" style={styles.fabEtiqueta} themeColor="surfaceText">
+              Restablecer
             </ThemedText>
           </Pressable>
         </View>
@@ -566,6 +597,14 @@ export default function HomeScreen() {
             reiniciarCompleto();
           }}
           onCancelar={() => setMostrarConfirmacionReinicioCompleto(false)}
+        />
+        <SavedSettingsDialog
+          visible={guardadoConfirmado !== null}
+          estudio={(guardadoConfirmado?.estudio ?? 0) / 60}
+          descansoCorto={(guardadoConfirmado?.descansoCorto ?? 0) / 60}
+          descansoLargo={(guardadoConfirmado?.descansoLargo ?? 0) / 60}
+          cicloPomodoros={guardadoConfirmado?.cicloPomodoros ?? 0}
+          onAceptar={() => setGuardadoConfirmado(null)}
         />
         <AlarmDialog
           visible={alarmaActiva}
