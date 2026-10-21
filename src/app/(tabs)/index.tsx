@@ -559,7 +559,7 @@ export default function HomeScreen() {
           visible={mostrarConfirmacionReinicioCompleto}
           titulo="¿Reiniciar completamente el pomodoro?"
           descripcion={
-            'Volverá a la fase de Estudio con 25:00 y se reiniciará el contador de pomodoros.'
+            'Volverá a la fase de Estudio con el tiempo programado y se reiniciará el contador de pomodoros a 0.'
           }
           onAceptar={() => {
             setMostrarConfirmacionReinicioCompleto(false);
